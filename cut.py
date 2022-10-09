@@ -10,7 +10,9 @@ DONE_FOLDER = DIR + '/cut'
 def cut(filename):
     input = cv2.imread(f"{UPLOAD_FOLDER}/{filename}")
     output = remove(input)
-    cv2.imwrite(f'{DONE_FOLDER}/{filename}', output)
+    filename1 = filename.split('.')[0] + '.png'
+    cv2.imwrite(f'{DONE_FOLDER}/{filename1}', output)
+    return filename1
 
 #
 # def cut_img(filename):

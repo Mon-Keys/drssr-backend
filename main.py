@@ -6,7 +6,7 @@ from cut import cut
 DIR = os.getcwd()
 UPLOAD_FOLDER = DIR + '/uploads'
 DONE_FOLDER = DIR + '/cut'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -34,20 +34,23 @@ def upload_file():
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
+        print("--------1")
         file = request.files['file']
+        print("--------2")
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
+        print("--------3")
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
             # cut_img(filename)  # Магия
-            cut(filename)  # Super Магия
+            fname = cut(filename)  # Super Магия
 
             return redirect(url_for('uploaded_file',
-                                    filename=filename))
+                                    filename=fname))
     return '''
     <!doctype html>
     <title>Upload new File</title>

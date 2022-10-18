@@ -35,7 +35,7 @@ func SetUserRouting(
 
 	userPublicAPI.HandleFunc("/signup", userDelivery.signup).Methods(http.MethodPost)
 	userPublicAPI.HandleFunc("/login", userDelivery.login).Methods(http.MethodPost)
-	userPublicAPI.HandleFunc("/", userDelivery.getSomeUser).Methods(http.MethodGet)
+	userPublicAPI.HandleFunc("", userDelivery.getSomeUser).Methods(http.MethodGet)
 
 	authMw := middleware.NewAuthMiddleware(uu, logger)
 
@@ -44,9 +44,9 @@ func SetUserRouting(
 
 	userPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
-	userPrivateAPI.HandleFunc("/", userDelivery.getUser).Methods(http.MethodGet)
-	userPrivateAPI.HandleFunc("/", userDelivery.updateUser).Methods(http.MethodPut)
-	userPrivateAPI.HandleFunc("/", userDelivery.deleteUser).Methods(http.MethodDelete)
+	userPrivateAPI.HandleFunc("", userDelivery.getUser).Methods(http.MethodGet)
+	userPrivateAPI.HandleFunc("", userDelivery.updateUser).Methods(http.MethodPut)
+	userPrivateAPI.HandleFunc("", userDelivery.deleteUser).Methods(http.MethodDelete)
 	userPrivateAPI.HandleFunc("/logout", userDelivery.logout).Methods(http.MethodDelete)
 }
 
@@ -63,20 +63,20 @@ func (ud *UserDelivery) signup(w http.ResponseWriter, r *http.Request) {
 	var credentials models.SignupCredentials
 	err := ioutils.ReadJSON(r, &credentials)
 	if err != nil {
-		logger.WithField("status", http.StatusBadRequest).Errorf("failed to parse JSON")
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
 	if credentials.Email == "" || credentials.Password == "" || credentials.Nickname == "" || credentials.BirthDate == "" {
-		logger.WithField("status", http.StatusBadRequest).Errorf("bad request from client")
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
 	createdUser, sessionID, status, err := ud.userUseCase.SignupUser(ctx, credentials)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to signup user:")
+		logger.WithField("status", status).Errorf("Failed to signup user: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -103,20 +103,20 @@ func (ud *UserDelivery) login(w http.ResponseWriter, r *http.Request) {
 	var credentials models.LoginCredentials
 	err := ioutils.ReadJSON(r, &credentials)
 	if err != nil {
-		logger.WithField("status", http.StatusBadRequest).Errorf("failed to parse JSON")
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
 	if credentials.Login == "" || credentials.Password == "" {
-		logger.WithField("status", http.StatusBadRequest).Errorf("bad request from client")
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
 	user, sessionID, status, err := ud.userUseCase.LoginUser(ctx, credentials)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to login user:")
+		logger.WithField("status", status).Errorf("Failed to login user: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -142,14 +142,14 @@ func (ud *UserDelivery) getSomeUser(w http.ResponseWriter, r *http.Request) {
 
 	nickname := r.URL.Query().Get("nickname")
 	if nickname == "" {
-		logger.WithField("status", http.StatusBadRequest).Errorf("bad request from client")
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
 	user, status, err := ud.userUseCase.GetUserByNickname(ctx, nickname)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to get user by nickname:")
+		logger.WithField("status", status).Errorf("Failed to get user by nickname: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -168,7 +168,7 @@ func (ud *UserDelivery) getUser(w http.ResponseWriter, r *http.Request) {
 	})
 	user := ctx_utils.GetUser(ctx)
 	if user == nil {
-		logger.WithField("status", http.StatusForbidden).Errorf("failed to get user from ctx")
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
 		ioutils.SendDefaultError(w, http.StatusForbidden)
 		return
 	}
@@ -185,15 +185,106 @@ func (ud *UserDelivery) updateUser(w http.ResponseWriter, r *http.Request) {
 	})
 	user := ctx_utils.GetUser(ctx)
 	if user == nil {
-		logger.WithField("status", http.StatusForbidden).Errorf("failed to get user from ctx")
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
 		ioutils.SendDefaultError(w, http.StatusForbidden)
 		return
 	}
-	// TODO
+
+	var newUserData models.UpdateUserReq
+	err := ioutils.ReadJSON(r, &newUserData)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	updateUser, status, err := ud.userUseCase.UpdateUser(ctx, newUserData)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to update user: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, updateUser)
 }
 
 func (ud *UserDelivery) deleteUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ud.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	cookieToken, err := r.Cookie("session-id")
+	if err != nil {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to get cookie from request")
+		ioutils.SendDefaultError(w, http.StatusInternalServerError)
+		return
+	}
+
+	status, err := ud.userUseCase.DeleteUser(ctx, *user, cookieToken.Value)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to delete user: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	cookie := &http.Cookie{
+		Name:   "session-id",
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/api/v1",
+	}
+
+	http.SetCookie(w, cookie)
+	ioutils.SendWithoutBody(w, status)
 }
 
 func (ud *UserDelivery) logout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ud.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	cookieToken, err := r.Cookie("session-id")
+	if err != nil {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to get cookie from request")
+		ioutils.SendDefaultError(w, http.StatusInternalServerError)
+		return
+	}
+
+	status, err := ud.userUseCase.LogoutUser(ctx, cookieToken.Value)
+	if err != nil || status != http.StatusOK {
+		logger.WithField(
+			"status",
+			http.StatusInternalServerError,
+		).Errorf("Failed to delete cookie value from redis: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	cookie := &http.Cookie{
+		Name:   "session-id",
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/api/v1",
+	}
+
+	http.SetCookie(w, cookie)
+	ioutils.SendWithoutBody(w, status)
 }

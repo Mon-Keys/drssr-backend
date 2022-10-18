@@ -1,0 +1,18 @@
+{
+    "drssr": {
+        "port": ":3001"
+    },
+    "redis": {
+      "address": "localhost:6379",
+      "password": "",
+      "db_name": 0
+    },
+    "postgres": {
+      "host": "localhost",
+      "port": "5432",
+      "user": "admin",
+      "pass": "lolkek",
+      "name": "drssr"
+    },
+    "expiration_cookie_time": 1382400
+}

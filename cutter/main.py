@@ -2,6 +2,7 @@ import os
 from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from cut import cut
+import base64
 
 DIR = os.getcwd()
 UPLOAD_FOLDER = DIR + '/uploads'
@@ -49,9 +50,16 @@ def upload_file():
             # cut_img(filename)  # Магия
             fname = cut(filename)  # Super Магия
 
+            with open(UPLOAD_FOLDER+"/"+filename, "rb") as image_file:
+                encoded_img = base64.b64encode(image_file.read()).decode("utf-8") 
+
+            mask_filename = filename.split('.')
+            with open(DONE_FOLDER+"/"+mask_filename[0]+'.png', "rb") as image_file:
+                encoded_mask = base64.b64encode(image_file.read()).decode("utf-8") 
+
             return jsonify(
-                img_path=UPLOAD_FOLDER+"/"+filename,
-                mask_path=DONE_FOLDER+"/"+filename
+                img=encoded_img,
+                mask=encoded_mask
             )
 
             # return redirect(url_for('uploaded_file',

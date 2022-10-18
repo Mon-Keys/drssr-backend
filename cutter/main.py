@@ -1,5 +1,5 @@
 import os
-from flask import Flask, flash, request, redirect, url_for, send_from_directory
+from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from cut import cut
 
@@ -13,14 +13,14 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DONE_FOLDER'] = DONE_FOLDER
 
 
-@app.route("/", methods=['GET'])
-def index():
-    return "Hello, "
+# @app.route("/", methods=['GET'])
+# def index():
+#     return "Hello, "
 
 
-@app.route("/about", methods=['GET'])
-def index1():
-    return "about, "
+# @app.route("/about", methods=['GET'])
+# def index1():
+#     return "about, "
 
 
 def allowed_file(filename):
@@ -49,8 +49,13 @@ def upload_file():
             # cut_img(filename)  # Магия
             fname = cut(filename)  # Super Магия
 
-            return redirect(url_for('uploaded_file',
-                                    filename=fname))
+            return jsonify(
+                img_path=UPLOAD_FOLDER+"/"+filename,
+                mask_path=DONE_FOLDER+"/"+filename
+            )
+
+            # return redirect(url_for('uploaded_file',
+            #                         filename=fname))
     return '''
     <!doctype html>
     <title>Upload new File</title>

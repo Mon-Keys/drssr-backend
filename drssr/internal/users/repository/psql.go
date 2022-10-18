@@ -12,6 +12,7 @@ import (
 
 type IPostgresqlRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
+	GetUserByNickname(ctx context.Context, nickname string) (models.User, error)
 	AddUser(ctx context.Context, user models.SignupCredentials) (models.User, error)
 	UpdateUser(ctx context.Context, user models.User) (models.User, error)
 	DeleteUser(ctx context.Context, user models.User) (models.User, error)
@@ -57,6 +58,7 @@ func (pr *postgresqlRepository) GetUserByEmail(ctx context.Context, email string
 			id,
 			nickname,
 			email,
+			password,
 			name,
 			avatar,
 			stylist,
@@ -72,6 +74,45 @@ func (pr *postgresqlRepository) GetUserByEmail(ctx context.Context, email string
 		&user.ID,
 		&user.Nickname,
 		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.Avatar,
+		&user.Stylist,
+		&user.BirthDate,
+		&user.Desc,
+		&user.Ctime,
+	)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
+
+func (pr *postgresqlRepository) GetUserByNickname(ctx context.Context, nickname string) (models.User, error) {
+	var user models.User
+	err := pr.conn.QueryRow(
+		`SELECT
+			id,
+			nickname,
+			email,
+			password,
+			name,
+			avatar,
+			stylist,
+			birth_date,
+			description,
+			created_at
+		FROM
+			users
+		WHERE
+			nickname = $1;`,
+		nickname,
+	).Scan(
+		&user.ID,
+		&user.Nickname,
+		&user.Email,
+		&user.Password,
 		&user.Name,
 		&user.Avatar,
 		&user.Stylist,

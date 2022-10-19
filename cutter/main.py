@@ -12,7 +12,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DONE_FOLDER'] = DONE_FOLDER
-
+app.secret_key = "secret"
 
 # @app.route("/", methods=['GET'])
 # def index():

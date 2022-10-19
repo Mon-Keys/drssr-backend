@@ -1,5 +1,5 @@
 import os
-from flask import Flask, flash, request, redirect, url_for, send_from_directory
+from flask import Flask, flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
 from cut import cut
 
@@ -49,8 +49,9 @@ def upload_file():
             # cut_img(filename)  # Магия
             fname = cut(filename)  # Super Магия
 
-            return redirect(url_for('uploaded_file',
-                                    filename=fname))
+            return jsonify(path=fname)
+            # return redirect(url_for('uploaded_file',
+            #                         filename=fname))
     return '''
     <!doctype html>
     <title>Upload new File</title>

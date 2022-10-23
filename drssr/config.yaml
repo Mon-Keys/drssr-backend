@@ -1,9 +1,9 @@
 drssr:
-  port: ":3001"
+  port: ':3001'
 
 redis:
-  address: "localhost:6379"
-  password: ""
+  address: 'localhost:6379'
+  password: ''
   db_name: 0
 
 postgres:
@@ -17,4 +17,12 @@ cutter:
   url: 'http://127.0.0.1:5001'
   timeout: 10s
 
-expiration_cookie_time": 1382400,
+classifier:
+  url: 'localhost:5002'
+
+similarity:
+  url: 'http://127.0.0.1:5001'
+  timeout: 10s
+
+well_similarity_percent: 50
+expiration_cookie_time": 1382400

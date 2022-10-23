@@ -36,13 +36,8 @@ def classify_hist_with_split(image1, image2, size=(256, 256)):
     return sub_data
 
 def runAllImageSimilaryFun(para1, para2):
-    img1 = cv2.imread(f"{UPLOAD_FOLDER}/{para1}")
-    img2 = cv2.imread(f"{UPLOAD_FOLDER}/{para2}")
+    img1 = cv2.imread(para1)
+    img2 = cv2.imread(para2)
  
     n4 = classify_hist_with_split(img1, img2)
-    return str(n4)
-
-# if __name__ == "__main__":
-#     p1 = "darkBlueHoodie.png"
-#     p2 = "blackHoodie.png"
-#     print(runAllImageSimilaryFun(p1,p2))
+    return int(n4*100)

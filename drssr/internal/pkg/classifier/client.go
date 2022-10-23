@@ -1,12 +1,9 @@
-package main
+package classifier
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
-	"log"
 
-	pb "client/recognize"
+	pb "drssr/internal/pkg/classifier/recognize"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -53,23 +50,4 @@ func NewRecognizeApiClient(address string) (RecognizeAPIClient, error) {
 		client: c,
 	}
 	return client, nil
-}
-
-func main() {
-	conn, err := NewRecognizeApiClient("localhost:5002")
-	if err != nil {
-		log.Fatal("Failed to connect to recognizeAPI: ", err)
-	}
-
-	fileBytes, err := ioutil.ReadFile("watches.jpg")
-	if err != nil {
-		panic(err)
-	}
-
-	lol, err := conn.RecognizePhoto(context.Background(), fileBytes)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(lol)
 }

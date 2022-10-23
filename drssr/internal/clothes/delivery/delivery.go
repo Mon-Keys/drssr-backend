@@ -68,8 +68,17 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clothesSex := r.FormValue("sex")
+	clothesBrand := r.FormValue("brand")
+
 	// we upload only 1 file
-	fileHeader := r.MultipartForm.File["file"][0]
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("No file in request")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+	fileHeader := files[0]
 	if fileHeader.Size > consts.MaxUploadFileSize {
 		logger.WithField("status", http.StatusBadRequest).Errorf("File is too big")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -83,7 +92,13 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdClothes, status, err := cd.clothesUseCase.AddFile(ctx, user.ID, fileHeader, file)
+	createdClothes, status, err := cd.clothesUseCase.AddFile(ctx, usecase.AddFileArgs{
+		UID:          user.ID,
+		FileHeader:   fileHeader,
+		File:         file,
+		ClothesBrand: clothesBrand,
+		ClothesSex:   clothesSex,
+	})
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to add file: %w", err)
 		ioutils.SendDefaultError(w, status)

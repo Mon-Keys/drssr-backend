@@ -30,6 +30,15 @@ type CutterConfig struct {
 	Timeout time.Duration
 }
 
+type ClassifierConfig struct {
+	URL string
+}
+
+type SimilarityConfig struct {
+	URL     string
+	Timeout time.Duration
+}
+
 type TimeoutsConfig struct {
 	WriteTimeout   time.Duration
 	ReadTimeout    time.Duration
@@ -37,12 +46,15 @@ type TimeoutsConfig struct {
 }
 
 var (
-	Drssr                ServerConfig
-	Redis                RedisConfig
-	Postgres             PostgresConfig
-	Cutter               CutterConfig
-	ExpirationCookieTime time.Duration
-	Timeouts             TimeoutsConfig
+	Drssr                 ServerConfig
+	Redis                 RedisConfig
+	Postgres              PostgresConfig
+	Cutter                CutterConfig
+	Classifier            ClassifierConfig
+	Similarity            SimilarityConfig
+	WellSimilarityPercent int
+	ExpirationCookieTime  time.Duration
+	Timeouts              TimeoutsConfig
 )
 
 func SetConfig() {
@@ -74,6 +86,17 @@ func SetConfig() {
 		URL:     viper.GetString(`cutter.url`),
 		Timeout: viper.GetDuration(`cutter.timeout`),
 	}
+
+	Classifier = ClassifierConfig{
+		URL: viper.GetString(`classifier.url`),
+	}
+
+	Similarity = SimilarityConfig{
+		URL:     viper.GetString(`similarity.url`),
+		Timeout: viper.GetDuration(`similarity.timeout`),
+	}
+
+	WellSimilarityPercent = viper.GetInt("well_similarity_percent")
 
 	ExpirationCookieTime = viper.GetDuration("expiration_cookie_time")
 

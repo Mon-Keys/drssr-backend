@@ -5,8 +5,10 @@ import (
 	clothes_delivery "drssr/internal/clothes/delivery"
 	clothes_repository "drssr/internal/clothes/repository"
 	clothes_usecase "drssr/internal/clothes/usecase"
+	"drssr/internal/pkg/classifier"
 	"drssr/internal/pkg/cutter"
 	middleware "drssr/internal/pkg/middlewares"
+	"drssr/internal/pkg/similarity"
 	user_delivery "drssr/internal/users/delivery"
 	user_repository "drssr/internal/users/repository"
 	user_usecase "drssr/internal/users/usecase"
@@ -23,6 +25,12 @@ func main() {
 	// logger
 	logger := logrus.New()
 
+	// classifier client
+	cfc, err := classifier.NewRecognizeApiClient(config.Classifier.URL)
+	if err != nil {
+		logger.Fatal("Failed to connect to recognizeAPI: ", err)
+	}
+
 	// repository
 	ur := user_repository.NewPostgresqlRepository(config.Postgres, *logger)
 	rdr := user_repository.NewRedisRepository(config.Redis, *logger)
@@ -38,6 +46,11 @@ func main() {
 		*cutter.New(
 			config.Cutter.URL,
 			config.Cutter.Timeout,
+		),
+		cfc,
+		*similarity.New(
+			config.Similarity.URL,
+			config.Similarity.Timeout,
 		),
 		*logger,
 	)

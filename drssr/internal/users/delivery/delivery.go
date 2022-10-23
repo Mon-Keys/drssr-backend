@@ -21,6 +21,7 @@ type UserDelivery struct {
 func SetUserRouting(
 	router *mux.Router,
 	uu usecase.IUserUsecase,
+	authMw middleware.AuthMiddleware,
 	logger logrus.Logger,
 ) {
 	userDelivery := &UserDelivery{
@@ -36,8 +37,6 @@ func SetUserRouting(
 	userPublicAPI.HandleFunc("/signup", userDelivery.signup).Methods(http.MethodPost)
 	userPublicAPI.HandleFunc("/login", userDelivery.login).Methods(http.MethodPost)
 	userPublicAPI.HandleFunc("", userDelivery.getSomeUser).Methods(http.MethodGet)
-
-	authMw := middleware.NewAuthMiddleware(uu, logger)
 
 	// private API
 	userPrivateAPI := router.PathPrefix("/api/v1/users/private").Subrouter()
@@ -173,6 +172,10 @@ func (ud *UserDelivery) getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
 	ioutils.Send(w, http.StatusOK, user)
 }
 
@@ -189,6 +192,10 @@ func (ud *UserDelivery) updateUser(w http.ResponseWriter, r *http.Request) {
 		ioutils.SendDefaultError(w, http.StatusForbidden)
 		return
 	}
+
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
 
 	var newUserData models.UpdateUserReq
 	err := ioutils.ReadJSON(r, &newUserData)
@@ -221,6 +228,10 @@ func (ud *UserDelivery) deleteUser(w http.ResponseWriter, r *http.Request) {
 		ioutils.SendDefaultError(w, http.StatusForbidden)
 		return
 	}
+
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
 
 	cookieToken, err := r.Cookie("session-id")
 	if err != nil {
@@ -260,6 +271,10 @@ func (ud *UserDelivery) logout(w http.ResponseWriter, r *http.Request) {
 		ioutils.SendDefaultError(w, http.StatusForbidden)
 		return
 	}
+
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
 
 	cookieToken, err := r.Cookie("session-id")
 	if err != nil {

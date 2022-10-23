@@ -2,9 +2,14 @@ package main
 
 import (
 	"drssr/config"
-	"drssr/internal/users/delivery"
-	"drssr/internal/users/repository"
-	"drssr/internal/users/usecase"
+	clothes_delivery "drssr/internal/clothes/delivery"
+	clothes_repository "drssr/internal/clothes/repository"
+	clothes_usecase "drssr/internal/clothes/usecase"
+	"drssr/internal/pkg/cutter"
+	middleware "drssr/internal/pkg/middlewares"
+	user_delivery "drssr/internal/users/delivery"
+	user_repository "drssr/internal/users/repository"
+	user_usecase "drssr/internal/users/usecase"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -19,20 +24,30 @@ func main() {
 	logger := logrus.New()
 
 	// repository
-	ur := repository.NewPostgresqlRepository(config.Postgres, *logger)
-	rdr := repository.NewRedisRepository(config.Redis, *logger)
+	ur := user_repository.NewPostgresqlRepository(config.Postgres, *logger)
+	rdr := user_repository.NewRedisRepository(config.Redis, *logger)
+	cr := clothes_repository.NewPostgresqlRepository(config.Postgres, *logger)
 
 	// router
 	router := mux.NewRouter()
 
 	// usecase
-	uu := usecase.NewUserUsecase(ur, rdr, *logger)
+	uu := user_usecase.NewUserUsecase(ur, rdr, *logger)
+	cu := clothes_usecase.NewClothesUsecase(
+		cr,
+		*cutter.New(
+			config.Cutter.URL,
+			config.Cutter.Timeout,
+		),
+		*logger,
+	)
 
 	// middlewars
-	// auth := middleware.NewAuthMiddleware(uu, *logger)
+	authMw := middleware.NewAuthMiddleware(uu, *logger)
 
 	// delivery
-	delivery.SetUserRouting(router, uu, *logger)
+	user_delivery.SetUserRouting(router, uu, authMw, *logger)
+	clothes_delivery.SetClothesRouting(router, cu, authMw, *logger)
 
 	srv := &http.Server{
 		Handler:      router,

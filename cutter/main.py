@@ -1,8 +1,11 @@
 import os
 from flask import Flask, abort, flash, request, redirect, url_for, send_from_directory, jsonify
+from h11 import DONE
 from werkzeug.utils import secure_filename
 from cut import cut
 import base64
+from datetime import date
+import hashlib
 
 DIR = os.getcwd()
 UPLOAD_FOLDER = DIR + '/clothes'
@@ -30,22 +33,33 @@ def upload_file():
         if file.filename == '':
             return 'bad request', 400
 
+        today = date.today()
+        formated_today = today.strftime("%m-%d-%Y")
+        dir_name = hashlib.sha1(bytes(formated_today, 'utf-8')).hexdigest()
+        if not os.path.isdir(f'{UPLOAD_FOLDER}/{dir_name}'):
+            os.mkdir(path=f'{UPLOAD_FOLDER}/{dir_name}')
+            os.mkdir(path=f'{DONE_FOLDER}/{dir_name}')
+
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            mask_filename = filename.split('.')
+            img_path = f'{UPLOAD_FOLDER}/{dir_name}/{filename}'
+            mask_path = f'{DONE_FOLDER}/{dir_name}/{mask_filename[0]}.png'
+            file.save(img_path)
 
-            fname = cut(filename)  # Super Магия
+            cut(img_path=img_path, mask_path=mask_path)
 
-            with open(UPLOAD_FOLDER+"/"+filename, "rb") as image_file:
+            with open(img_path, "rb") as image_file:
                 encoded_img = base64.b64encode(image_file.read()).decode("utf-8") 
 
-            mask_filename = filename.split('.')
-            with open(DONE_FOLDER+"/"+mask_filename[0]+'.png', "rb") as image_file:
+            with open(mask_path, "rb") as image_file:
                 encoded_mask = base64.b64encode(image_file.read()).decode("utf-8") 
 
             return jsonify(
                 img=encoded_img,
-                mask=encoded_mask
+                img_path=img_path,
+                mask=encoded_mask,
+                mask_path=mask_path
             )
 
     return '''

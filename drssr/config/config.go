@@ -25,6 +25,11 @@ type PostgresConfig struct {
 	DBName   string
 }
 
+type CutterConfig struct {
+	URL     string
+	Timeout time.Duration
+}
+
 type TimeoutsConfig struct {
 	WriteTimeout   time.Duration
 	ReadTimeout    time.Duration
@@ -35,12 +40,13 @@ var (
 	Drssr                ServerConfig
 	Redis                RedisConfig
 	Postgres             PostgresConfig
+	Cutter               CutterConfig
 	ExpirationCookieTime time.Duration
 	Timeouts             TimeoutsConfig
 )
 
 func SetConfig() {
-	viper.SetConfigFile("config.json")
+	viper.SetConfigFile("config.yaml")
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.Fatal(err)
@@ -62,6 +68,11 @@ func SetConfig() {
 		User:     viper.GetString(`postgres.user`),
 		Password: viper.GetString(`postgres.pass`),
 		DBName:   viper.GetString(`postgres.name`),
+	}
+
+	Cutter = CutterConfig{
+		URL:     viper.GetString(`cutter.url`),
+		Timeout: viper.GetDuration(`cutter.timeout`),
 	}
 
 	ExpirationCookieTime = viper.GetDuration("expiration_cookie_time")

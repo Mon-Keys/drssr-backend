@@ -3,6 +3,7 @@ from flask import Flask, abort, flash, request, redirect, url_for, send_from_dir
 from h11 import DONE
 from werkzeug.utils import secure_filename
 from cut import cut
+from similarity import runAllImageSimilaryFun
 import base64
 from datetime import date
 import hashlib
@@ -10,7 +11,7 @@ import hashlib
 DIR = os.getcwd()
 UPLOAD_FOLDER = DIR + '/clothes'
 DONE_FOLDER = DIR + '/masks'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -60,6 +61,41 @@ def upload_file():
                 img_path=img_path,
                 mask=encoded_mask,
                 mask_path=mask_path
+            )
+
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form method=post enctype=multipart/form-data>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+    '''
+
+@app.route('/similarity', methods=['GET', 'POST'])
+def similarity():
+    if request.method == 'POST':
+        content = request.json
+
+        image = content['image']
+        images = content['images']
+
+        if image == '':
+            return 'bad request', 400
+
+        if not bool(images):
+            return 'bad request', 400
+
+        if image and allowed_file(image):
+            similarityDic = {}
+
+            for key, value in images.items():
+                sim = runAllImageSimilaryFun(image, value)
+                similarityDic.update({key:sim})
+
+            return jsonify(
+                similarity=similarityDic,
             )
 
     return '''

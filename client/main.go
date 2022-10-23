@@ -56,12 +56,12 @@ func NewRecognizeApiClient(address string) (RecognizeAPIClient, error) {
 }
 
 func main() {
-	conn, err := NewRecognizeApiClient("localhost:8082")
+	conn, err := NewRecognizeApiClient("localhost:5002")
 	if err != nil {
 		log.Fatal("Failed to connect to recognizeAPI: ", err)
 	}
 
-	fileBytes, err := ioutil.ReadFile("hoodie.jpg")
+	fileBytes, err := ioutil.ReadFile("watches.jpg")
 	if err != nil {
 		panic(err)
 	}

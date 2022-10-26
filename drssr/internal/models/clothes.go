@@ -15,3 +15,6 @@ type Clothes struct {
 	Sex      string    `json:"sex" db:"sex"`
 	Ctime    time.Time `json:"-" db:"created_at"`
 }
+
+//easyjson:json
+type ArrayClothes []Clothes

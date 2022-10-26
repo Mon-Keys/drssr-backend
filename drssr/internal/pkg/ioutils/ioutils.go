@@ -20,7 +20,7 @@ type WriteModel interface {
 
 func Send(w http.ResponseWriter, respCode int, respBody WriteModel) {
 	w.WriteHeader(respCode)
-	_ = writeJSON(w, respBody)
+	writeJSON(w, respBody)
 }
 
 func SendError(w http.ResponseWriter, respCode int, errorMsg string) {

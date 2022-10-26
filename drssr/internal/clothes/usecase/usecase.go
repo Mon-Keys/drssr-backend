@@ -9,7 +9,10 @@ import (
 	"drssr/internal/pkg/cutter"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/pkg/similarity"
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 
@@ -18,6 +21,8 @@ import (
 
 type IClothesUsecase interface {
 	AddFile(ctx context.Context, args AddFileArgs) (models.Clothes, int, error)
+	GetAllClothes(ctx context.Context, limit, offset int) (models.ArrayClothes, int, error)
+	GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) (models.ArrayClothes, int, error)
 }
 
 type clothesUsecase struct {
@@ -183,6 +188,60 @@ func (cu *clothesUsecase) AddFile(
 	return createdClothes, http.StatusOK, nil
 }
 
+func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) (models.ArrayClothes, int, error) {
+	clothes, err := cu.psql.GetAllClothes(ctx, limit, offset)
+	if err != nil {
+		return nil,
+			http.StatusInternalServerError,
+			err
+	}
+
+	for i, v := range clothes {
+		img, err := ioutil.ReadFile(v.ImgPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
+
+		mask, err := ioutil.ReadFile(v.MaskPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
+
+	}
+
+	return clothes, http.StatusOK, nil
+}
+
+func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) (models.ArrayClothes, int, error) {
+	clothes, err := cu.psql.GetUsersClothes(ctx, limit, offset, uid)
+	if err != nil {
+		return nil,
+			http.StatusInternalServerError,
+			err
+	}
+
+	for i, v := range clothes {
+		img, err := ioutil.ReadFile(v.ImgPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
+
+		mask, err := ioutil.ReadFile(v.MaskPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
+
+	}
+
+	return clothes, http.StatusOK, nil
+}
+
 func isEnabledFileType(fileType string) bool {
 	imgTypes := map[string]bool{
 		"image/jpg":  true,
@@ -190,10 +249,8 @@ func isEnabledFileType(fileType string) bool {
 		"image/png":  true,
 		"image/webp": true,
 	}
-	if imgTypes[fileType] {
-		return true
-	}
-	return false
+
+	return imgTypes[fileType]
 }
 
 func isEnabledExt(fileType string) bool {
@@ -202,8 +259,6 @@ func isEnabledExt(fileType string) bool {
 		".jpeg": true,
 		".png":  true,
 	}
-	if imgTypes[fileType] {
-		return true
-	}
-	return false
+
+	return imgTypes[fileType]
 }

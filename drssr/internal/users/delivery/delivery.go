@@ -30,7 +30,7 @@ func SetUserRouting(
 	}
 
 	// public API
-	userPublicAPI := router.PathPrefix("/api/v1/users/public").Subrouter()
+	userPublicAPI := router.PathPrefix("/api/v1/public/users").Subrouter()
 
 	userPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON)
 
@@ -39,7 +39,7 @@ func SetUserRouting(
 	userPublicAPI.HandleFunc("", userDelivery.getSomeUser).Methods(http.MethodGet)
 
 	// private API
-	userPrivateAPI := router.PathPrefix("/api/v1/users/private").Subrouter()
+	userPrivateAPI := router.PathPrefix("/api/v1/private/users").Subrouter()
 
 	userPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 

@@ -6,6 +6,7 @@ import (
 	"drssr/internal/clothes/repository"
 	"drssr/internal/models"
 	"drssr/internal/pkg/classifier"
+	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/cutter"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/pkg/similarity"
@@ -70,7 +71,7 @@ func (cu *clothesUsecase) AddFile(
 	}
 
 	fileType := http.DetectContentType(buf)
-	if !isEnabledFileType(fileType) {
+	if !common.IsEnabledFileType(fileType) {
 		return models.Clothes{},
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.AddFile: not enabled file type")
@@ -240,25 +241,4 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 	}
 
 	return clothes, http.StatusOK, nil
-}
-
-func isEnabledFileType(fileType string) bool {
-	imgTypes := map[string]bool{
-		"image/jpg":  true,
-		"image/jpeg": true,
-		"image/png":  true,
-		"image/webp": true,
-	}
-
-	return imgTypes[fileType]
-}
-
-func isEnabledExt(fileType string) bool {
-	imgTypes := map[string]bool{
-		".jpg":  true,
-		".jpeg": true,
-		".png":  true,
-	}
-
-	return imgTypes[fileType]
 }

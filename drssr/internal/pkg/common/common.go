@@ -62,6 +62,15 @@ func SaveFile(dirPath string, filePath string, fileBytes []byte) error {
 	return nil
 }
 
+func DeleteFile(path string) error {
+	err := os.Remove(path)
+	if err != nil {
+		return fmt.Errorf("failed to delete file: %w", err)
+	}
+
+	return nil
+}
+
 func IsEnabledFileType(fileType string) bool {
 	imgTypes := map[string]bool{
 		"image/jpg":  true,

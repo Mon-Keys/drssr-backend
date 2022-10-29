@@ -7,6 +7,7 @@ import (
 	"drssr/internal/pkg/ioutils"
 	middleware "drssr/internal/pkg/middlewares"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -33,8 +34,8 @@ func SetLooksRouting(
 	looksPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
 	looksPrivateAPI.HandleFunc("", clothesDelivery.addLook).Methods(http.MethodPost)
-	// looksPrivateAPI.HandleFunc("", clothesDelivery).Methods(http.MethodGet)
-	// looksPrivateAPI.HandleFunc("", clothesDelivery).Methods(http.MethodPut)
+	looksPrivateAPI.HandleFunc("", clothesDelivery.getLook).Methods(http.MethodGet)
+	looksPrivateAPI.HandleFunc("", clothesDelivery.updateLook).Methods(http.MethodPut)
 	// looksPrivateAPI.HandleFunc("", clothesDelivery).Methods(http.MethodDelete)
 
 	looksPublicAPI := router.PathPrefix("/api/v1/public/looks").Subrouter()
@@ -75,14 +76,116 @@ func (ld *LooksDelivery) addLook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdClothes, status, err := ld.looksUseCase.AddLook(ctx, look)
+	createdLook, status, err := ld.looksUseCase.AddLook(ctx, look)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
 
-	ioutils.Send(w, status, createdClothes)
+	ioutils.Send(w, status, createdLook)
+}
+
+func (ld *LooksDelivery) getLook(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ld.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	ld.logger = *ld.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	lidParam := r.URL.Query().Get("id")
+	if lidParam == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+	lid, err := strconv.ParseUint(lidParam, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if lid == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	look, status, err := ld.looksUseCase.GetLookByID(ctx, lid, user.ID)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, look)
+}
+
+func (ld *LooksDelivery) updateLook(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ld.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	ld.logger = *ld.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	var look models.Look
+	err := ioutils.ReadJSON(r, &look)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	lidParam := r.URL.Query().Get("id")
+	if lidParam == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+	lid, err := strconv.ParseUint(lidParam, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if look.Img == "" || look.CreatorID == 0 || len(look.Clothes) == 0 || lid == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	updatedLook, status, err := ld.looksUseCase.UpdateLook(ctx, look, lid, user.ID)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, updatedLook)
 }
 
 // func (cd *ClothesDelivery) getAllClothes(w http.ResponseWriter, r *http.Request) {

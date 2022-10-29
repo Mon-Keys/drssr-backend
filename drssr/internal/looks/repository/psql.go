@@ -16,6 +16,10 @@ type IPostgresqlRepository interface {
 	DeleteLook(ctx context.Context, lid uint64) error
 	AddLookClothesBind(ctx context.Context, clothes models.ClothesStruct, lid uint64) (models.ClothesStruct, error)
 	DeleteLookClothesBind(ctx context.Context, bid uint64) error
+	GetLookByID(ctx context.Context, lid uint64) (models.Look, error)
+	UpdateLookByID(ctx context.Context, lid uint64, newLook models.Look) (models.Look, error)
+	DeleteLookClothesBindsByID(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
+	GetLookClothes(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
 	// AddClothesUserBind(ctx context.Context, uid uint64, cid uint64) (uint64, error)
 	// DeleteClothesUserBind(ctx context.Context, bid uint64) error
 	// GetClothesMaskByTypeAndSex(ctx context.Context, clothesType string, clothesSex string) ([]models.Clothes, error)
@@ -148,6 +152,125 @@ func (pr *postgresqlRepository) DeleteLookClothesBind(ctx context.Context, bid u
 		}
 	}
 	return nil
+}
+
+func (pr *postgresqlRepository) GetLookByID(ctx context.Context, lid uint64) (models.Look, error) {
+	var look models.Look
+	err := pr.conn.QueryRow(
+		`SELECT id, img, description, creator_id FROM looks WHERE id = $1;`,
+		lid,
+	).Scan(
+		&look.ID,
+		&look.ImgPath,
+		&look.Description,
+		&look.CreatorID,
+	)
+	if err != nil {
+		return models.Look{}, err
+	}
+
+	return look, nil
+}
+
+func (pr *postgresqlRepository) UpdateLookByID(
+	ctx context.Context,
+	lid uint64,
+	newLook models.Look,
+) (models.Look, error) {
+	var updatedLook models.Look
+	err := pr.conn.QueryRow(
+		`UPDATE looks
+		SET (img, description) = ($2, $3)
+		WHERE id = $1
+		RETURNING id, img, description;`,
+		lid,
+		newLook.ImgPath,
+		newLook.Description,
+	).Scan(
+		&updatedLook.ID,
+		&updatedLook.ImgPath,
+		&updatedLook.Description,
+	)
+
+	if err != nil {
+		return models.Look{}, err
+	}
+	return updatedLook, nil
+}
+
+func (pr *postgresqlRepository) GetLookClothes(
+	ctx context.Context,
+	lid uint64,
+) ([]models.ClothesStruct, error) {
+	rows, err := pr.conn.Query(
+		`SELECT
+			c.id, c.type, c.brand, cl.x, cl.y
+		FROM clothes_looks cl
+		JOIN clothes c ON c.id = cl.clothes_id
+		WHERE look_id = $1;`,
+		lid,
+	)
+	if err != nil {
+		return []models.ClothesStruct{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.ClothesStruct
+	var row models.ClothesStruct
+	for rows.Next() {
+		var clothesType string
+		var clothesBrand string
+		err := rows.Scan(
+			&row.ID,
+			&clothesType,
+			&clothesBrand,
+			&row.Coords.X,
+			&row.Coords.Y,
+		)
+		if err != nil {
+			return []models.ClothesStruct{}, err
+		}
+		row.Label = fmt.Sprintf("%s %s", clothesType, clothesBrand)
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.ClothesStruct{}, err
+	}
+
+	return respList, nil
+}
+
+func (pr *postgresqlRepository) DeleteLookClothesBindsByID(
+	ctx context.Context,
+	lid uint64,
+) ([]models.ClothesStruct, error) {
+	rows, err := pr.conn.Query(
+		`DELETE FROM clothes_looks WHERE look_id = $1 RETURNING look_id, x, y;`,
+		lid,
+	)
+	if err != nil {
+		return []models.ClothesStruct{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.ClothesStruct
+	var row models.ClothesStruct
+	for rows.Next() {
+		err := rows.Scan(
+			&row.ID,
+			&row.Coords.X,
+			&row.Coords.Y,
+		)
+		if err != nil {
+			return []models.ClothesStruct{}, err
+		}
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.ClothesStruct{}, err
+	}
+
+	return respList, nil
 }
 
 // func (pr *postgresqlRepository) AddClothesUserBind(ctx context.Context, uid uint64, cid uint64) (uint64, error) {

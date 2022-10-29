@@ -2,14 +2,11 @@ package delivery
 
 import (
 	"drssr/internal/looks/usecase"
-	"drssr/internal/pkg/common"
-	"drssr/internal/pkg/consts"
+	"drssr/internal/models"
 	"drssr/internal/pkg/ctx_utils"
 	"drssr/internal/pkg/ioutils"
 	middleware "drssr/internal/pkg/middlewares"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -64,60 +61,23 @@ func (ld *LooksDelivery) addLook(w http.ResponseWriter, r *http.Request) {
 		"user": user.Email,
 	}).Logger
 
-	r.Body = http.MaxBytesReader(w, r.Body, consts.MaxUploadFileSize)
-	if err := r.ParseMultipartForm(consts.MaxUploadFileSize); err != nil {
-		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse multipart/form-data request: %w", err)
+	var look models.Look
+	err := ioutils.ReadJSON(r, &look)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
-	clothesStr := r.FormValue("clothes")
-	clothesStr = strings.Trim(clothesStr, "[]")
-	clothesSplitedStr := strings.Split(clothesStr, ",")
-	if len(clothesSplitedStr) == 0 {
-		logger.WithField("status", http.StatusBadRequest).Errorf("Empty closes array")
+	if look.Img == "" || look.CreatorID == 0 || len(look.Clothes) == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
-	clothes := make([]uint64, len(clothesSplitedStr), len(clothesSplitedStr))
-	for i, clothesIDStr := range clothesSplitedStr {
-		clothesID, err := strconv.ParseUint(clothesIDStr, 10, 64)
-		if err != nil {
-			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse clothes array: %w", err)
-			ioutils.SendDefaultError(w, http.StatusBadRequest)
-			return
-		}
-		clothes[i] = clothesID
-	}
-
-	description := r.FormValue("description")
-
-	file, fileHeader, status, err := common.OpenFileFromReq(r, "file")
-	if err != nil {
-		logger.WithField("status", status).Errorf("Opening file error: %w", err)
-		ioutils.SendDefaultError(w, status)
-		return
-	}
-
-	previewFile, previewFileHeader, status, err := common.OpenFileFromReq(r, "preview_file")
-	if err != nil {
-		logger.WithField("status", status).Errorf("Opening preview file error: %w", err)
-		ioutils.SendDefaultError(w, status)
-		return
-	}
-
-	createdClothes, status, err := ld.looksUseCase.AddLook(ctx, usecase.AddLookArgs{
-		UID:               user.ID,
-		FileHeader:        fileHeader,
-		File:              *file,
-		PreviewFileHeader: previewFileHeader,
-		PreviewFile:       *previewFile,
-		Clothes:           clothes,
-		Description:       description,
-	})
+	createdClothes, status, err := ld.looksUseCase.AddLook(ctx, look)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to add file: %w", err)
+		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}

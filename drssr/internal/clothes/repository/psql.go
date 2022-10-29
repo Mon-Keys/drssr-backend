@@ -21,6 +21,7 @@ type IPostgresqlRepository interface {
 	GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) ([]models.Clothes, error)
 	AddSimilarityBind(ctx context.Context, mainCID uint64, secondCID uint64, percent int) (uint64, error)
 	DeleteSimilarityBind(ctx context.Context, bid uint64) error
+	GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, error)
 }
 
 type postgresqlRepository struct {
@@ -305,4 +306,26 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 	}
 
 	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, error) {
+	var clothes models.Clothes
+	err := pr.conn.QueryRow(
+		`SELECT id, type, color, img, mask, brand, sex, created_at FROM clothes WHERE id = $1;`,
+		cid,
+	).Scan(
+		&clothes.ID,
+		&clothes.Type,
+		&clothes.Color,
+		&clothes.ImgPath,
+		&clothes.Mask,
+		&clothes.Brand,
+		&clothes.Sex,
+		&clothes.Ctime,
+	)
+	if err != nil {
+		return models.Clothes{}, err
+	}
+
+	return clothes, nil
 }

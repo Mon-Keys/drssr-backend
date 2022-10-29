@@ -58,7 +58,7 @@ func main() {
 		),
 		*logger,
 	)
-	lu := looks_usecase.NewLooksUsecase(lr, *logger)
+	lu := looks_usecase.NewLooksUsecase(lr, cr, *logger)
 
 	// middlewars
 	authMw := middleware.NewAuthMiddleware(uu, *logger)

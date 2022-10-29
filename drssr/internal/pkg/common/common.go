@@ -3,6 +3,7 @@ package common
 import (
 	"bytes"
 	"drssr/internal/pkg/consts"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -32,7 +33,12 @@ func OpenFileFromReq(r *http.Request, fileName string) (*multipart.File, *multip
 	return &file, fileHeader, http.StatusOK, nil
 }
 
-func SaveFile(filePath string, fileBytes []byte) error {
+func SaveFile(dirPath string, filePath string, fileBytes []byte) error {
+	// create dst directory
+	err := os.Mkdir(dirPath, 0777)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return fmt.Errorf("failed to create a new dir: %w", err)
+	}
 	// create a new file in the dst directory
 	dst, err := os.Create(filePath)
 	if err != nil {

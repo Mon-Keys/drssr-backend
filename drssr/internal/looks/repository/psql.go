@@ -14,7 +14,7 @@ import (
 type IPostgresqlRepository interface {
 	AddLook(ctx context.Context, look models.Look) (models.Look, error)
 	DeleteLook(ctx context.Context, lid uint64) error
-	AddLookClothesBind(ctx context.Context, lid uint64, cid uint64) (uint64, error)
+	AddLookClothesBind(ctx context.Context, clothes models.ClothesStruct, lid uint64) (models.ClothesStruct, error)
 	DeleteLookClothesBind(ctx context.Context, bid uint64) error
 	// AddClothesUserBind(ctx context.Context, uid uint64, cid uint64) (uint64, error)
 	// DeleteClothesUserBind(ctx context.Context, bid uint64) error
@@ -61,22 +61,19 @@ func NewPostgresqlRepository(cfg config.PostgresConfig, logger logrus.Logger) IP
 func (pr *postgresqlRepository) AddLook(ctx context.Context, look models.Look) (models.Look, error) {
 	var createdLook models.Look
 	err := pr.conn.QueryRow(
-		`INSERT INTO looks (preview, img, description, creator_id)
-		VALUES ($1, $2, $3, $4)
+		`INSERT INTO looks (img, description, creator_id)
+		VALUES ($1, $2, $3)
 		RETURNING
 			id,
-			preview,
 			img,
 			description,
 			creator_id,
 			created_at;`,
-		look.PreviewPath,
 		look.ImgPath,
 		look.Description,
 		look.CreatorID,
 	).Scan(
 		&createdLook.ID,
-		&createdLook.PreviewPath,
 		&createdLook.ImgPath,
 		&createdLook.Description,
 		&createdLook.CreatorID,
@@ -110,25 +107,28 @@ func (pr *postgresqlRepository) DeleteLook(ctx context.Context, lid uint64) erro
 
 func (pr *postgresqlRepository) AddLookClothesBind(
 	ctx context.Context,
+	clothes models.ClothesStruct,
 	lid uint64,
-	cid uint64,
-) (uint64, error) {
-	var createdBindID uint64
+) (models.ClothesStruct, error) {
+	var createdBind models.ClothesStruct
 	err := pr.conn.QueryRow(
-		`INSERT INTO clothes_looks (clothes_id, look_id)
-		VALUES ($1, $2)
-		RETURNING
-			id;`,
-		cid,
+		`INSERT INTO clothes_looks (clothes_id, look_id, x, y)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, x, y;`,
+		clothes.ID,
 		lid,
+		clothes.Coords.X,
+		clothes.Coords.Y,
 	).Scan(
-		&createdBindID,
+		&createdBind.ID,
+		&createdBind.Coords.X,
+		&createdBind.Coords.Y,
 	)
 
 	if err != nil {
-		return 0, err
+		return models.ClothesStruct{}, err
 	}
-	return createdBindID, nil
+	return createdBind, nil
 }
 
 func (pr *postgresqlRepository) DeleteLookClothesBind(ctx context.Context, bid uint64) error {

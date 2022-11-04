@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"drssr/internal/clothes/usecase"
+	"drssr/internal/models"
 	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
 	"drssr/internal/pkg/ctx_utils"
@@ -35,8 +36,9 @@ func SetClothesRouting(
 	clothesPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
 	clothesPrivateAPI.HandleFunc("", clothesDelivery.addClothes).Methods(http.MethodPost)
+	clothesPrivateAPI.HandleFunc("", clothesDelivery.updateClothes).Methods(http.MethodPut)
 	clothesPrivateAPI.HandleFunc("", clothesDelivery.getUsersClothes).Methods(http.MethodGet)
-	// clothesPrivateAPI.HandleFunc("", ClothesDelivery.deleteUser).Methods(http.MethodDelete)
+	clothesPrivateAPI.HandleFunc("", clothesDelivery.deleteClothes).Methods(http.MethodDelete)
 
 	// public API
 	clothesPublicAPI := router.PathPrefix("/api/v1/public/clothes").Subrouter()
@@ -70,9 +72,6 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clothesSex := r.FormValue("sex")
-	clothesBrand := r.FormValue("brand")
-
 	file, fileHeader, status, err := common.OpenFileFromReq(r, "file")
 	if err != nil {
 		logger.WithField("status", status).Errorf("Opening file error: %w", err)
@@ -81,11 +80,9 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createdClothes, status, err := cd.clothesUseCase.AddFile(ctx, usecase.AddFileArgs{
-		UID:          user.ID,
-		FileHeader:   fileHeader,
-		File:         *file,
-		ClothesBrand: clothesBrand,
-		ClothesSex:   clothesSex,
+		UID:        user.ID,
+		FileHeader: fileHeader,
+		File:       *file,
 	})
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to add file: %w", err)
@@ -94,6 +91,112 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ioutils.Send(w, status, createdClothes)
+}
+
+func (cd *ClothesDelivery) updateClothes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := cd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	cd.logger = *cd.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	clothesIDStr := r.URL.Query().Get("id")
+	if clothesIDStr == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid clothes ID query param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	clothesID, err := strconv.ParseUint(clothesIDStr, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse url query")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if clothesID == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid clothes ID")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	var newClothesData models.Clothes
+	err = ioutils.ReadJSON(r, &newClothesData)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse JSON")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	newClothesData.ID = clothesID
+
+	updatedClothes, status, err := cd.clothesUseCase.UpdateClothes(ctx, user.ID, newClothesData)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to update clothes: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, updatedClothes)
+}
+
+func (cd *ClothesDelivery) deleteClothes(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := cd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	cd.logger = *cd.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	clothesIDStr := r.URL.Query().Get("id")
+	if clothesIDStr == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid clothes ID query param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	clothesID, err := strconv.ParseUint(clothesIDStr, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse url query")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if clothesID == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid clothes ID")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	status, err := cd.clothesUseCase.DeleteClothes(ctx, user.ID, clothesID)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to delete clothes: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.SendWithoutBody(w, status)
 }
 
 func (cd *ClothesDelivery) getAllClothes(w http.ResponseWriter, r *http.Request) {

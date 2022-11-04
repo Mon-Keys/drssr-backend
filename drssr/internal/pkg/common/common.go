@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func OpenFileFromReq(r *http.Request, fileName string) (*multipart.File, *multipart.FileHeader, int, error) {
@@ -90,4 +91,9 @@ func IsEnabledExt(fileType string) bool {
 	}
 
 	return imgTypes[fileType]
+}
+
+func GetExtFromFileType(fileType string) string {
+	_, after, _ := strings.Cut(fileType, "/")
+	return after
 }

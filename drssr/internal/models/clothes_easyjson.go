@@ -50,6 +50,14 @@ func easyjson31a459deDecodeDrssrInternalModels(in *jlexer.Lexer, out *Clothes) {
 			out.Brand = string(in.String())
 		case "sex":
 			out.Sex = string(in.String())
+		case "link":
+			out.Link = string(in.String())
+		case "price":
+			out.Price = uint(in.Uint())
+		case "currency":
+			out.Currency = CurrencyType(in.String())
+		case "owner_id":
+			out.OwnerID = uint64(in.Uint64())
 		default:
 			in.SkipRecursive()
 		}
@@ -74,7 +82,7 @@ func easyjson31a459deEncodeDrssrInternalModels(out *jwriter.Writer, in Clothes) 
 		out.RawString(prefix)
 		out.String(string(in.Type))
 	}
-	{
+	if in.Color != "" {
 		const prefix string = ",\"color\":"
 		out.RawString(prefix)
 		out.String(string(in.Color))
@@ -89,15 +97,35 @@ func easyjson31a459deEncodeDrssrInternalModels(out *jwriter.Writer, in Clothes) 
 		out.RawString(prefix)
 		out.String(string(in.Mask))
 	}
-	{
+	if in.Brand != "" {
 		const prefix string = ",\"brand\":"
 		out.RawString(prefix)
 		out.String(string(in.Brand))
 	}
-	{
+	if in.Sex != "" {
 		const prefix string = ",\"sex\":"
 		out.RawString(prefix)
 		out.String(string(in.Sex))
+	}
+	if in.Link != "" {
+		const prefix string = ",\"link\":"
+		out.RawString(prefix)
+		out.String(string(in.Link))
+	}
+	if in.Price != 0 {
+		const prefix string = ",\"price\":"
+		out.RawString(prefix)
+		out.Uint(uint(in.Price))
+	}
+	if in.Currency != "" {
+		const prefix string = ",\"currency\":"
+		out.RawString(prefix)
+		out.String(string(in.Currency))
+	}
+	{
+		const prefix string = ",\"owner_id\":"
+		out.RawString(prefix)
+		out.Uint64(uint64(in.OwnerID))
 	}
 	out.RawByte('}')
 }

@@ -24,7 +24,7 @@ func SetLooksRouting(
 	authMw middleware.AuthMiddleware,
 	logger logrus.Logger,
 ) {
-	clothesDelivery := &LooksDelivery{
+	lookDelivery := &LooksDelivery{
 		looksUseCase: cu,
 		logger:       logger,
 	}
@@ -33,15 +33,15 @@ func SetLooksRouting(
 	looksPrivateAPI := router.PathPrefix("/api/v1/private/looks").Subrouter()
 	looksPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
-	looksPrivateAPI.HandleFunc("", clothesDelivery.addLook).Methods(http.MethodPost)
-	looksPrivateAPI.HandleFunc("", clothesDelivery.getLook).Methods(http.MethodGet)
-	looksPrivateAPI.HandleFunc("", clothesDelivery.updateLook).Methods(http.MethodPut)
-	// looksPrivateAPI.HandleFunc("", clothesDelivery).Methods(http.MethodDelete)
+	looksPrivateAPI.HandleFunc("", lookDelivery.addLook).Methods(http.MethodPost)
+	looksPrivateAPI.HandleFunc("", lookDelivery.getLook).Methods(http.MethodGet)
+	looksPrivateAPI.HandleFunc("", lookDelivery.updateLook).Methods(http.MethodPut)
+	// looksPrivateAPI.HandleFunc("", lookDelivery.deleteLook).Methods(http.MethodDelete)
 
 	looksPublicAPI := router.PathPrefix("/api/v1/public/looks").Subrouter()
 	looksPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON)
 
-	// looksPublicAPI.HandleFunc("/all", clothesDelivery).Methods(http.MethodGet)
+	// looksPublicAPI.HandleFunc("/all", lookDelivery).Methods(http.MethodGet)
 }
 
 func (ld *LooksDelivery) addLook(w http.ResponseWriter, r *http.Request) {
@@ -188,55 +188,10 @@ func (ld *LooksDelivery) updateLook(w http.ResponseWriter, r *http.Request) {
 	ioutils.Send(w, status, updatedLook)
 }
 
-// func (cd *ClothesDelivery) getAllClothes(w http.ResponseWriter, r *http.Request) {
-// 	var err error
-
+// func (ld *LooksDelivery) deleteLook(w http.ResponseWriter, r *http.Request) {
 // 	ctx := r.Context()
 // 	reqID := ctx_utils.GetReqID(ctx)
-// 	logger := cd.logger.WithFields(logrus.Fields{
-// 		"url":    r.URL,
-// 		"req_id": reqID,
-// 	})
-
-// 	queryParams := r.URL.Query()
-
-// 	limitStr := queryParams.Get("limit")
-// 	limitInt := 0
-// 	if limitStr != "" {
-// 		limitInt, err = strconv.Atoi(limitStr)
-// 		if err != nil || limitInt < 0 {
-// 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
-// 			ioutils.SendDefaultError(w, http.StatusBadRequest)
-// 			return
-// 		}
-// 	}
-// 	offsetStr := queryParams.Get("offset")
-// 	offsetInt := 0
-// 	if offsetStr != "" {
-// 		offsetInt, err = strconv.Atoi(offsetStr)
-// 		if err != nil || offsetInt < 0 {
-// 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
-// 			ioutils.SendDefaultError(w, http.StatusBadRequest)
-// 			return
-// 		}
-// 	}
-
-// 	allClothes, status, err := cd.clothesUseCase.GetAllClothes(ctx, limitInt, offsetInt)
-// 	if err != nil || status != http.StatusOK {
-// 		logger.WithField("status", status).Errorf("Failed to get clothes: %w", err)
-// 		ioutils.SendDefaultError(w, status)
-// 		return
-// 	}
-
-// 	ioutils.Send(w, status, allClothes)
-// }
-
-// func (cd *ClothesDelivery) getUsersClothes(w http.ResponseWriter, r *http.Request) {
-// 	var err error
-
-// 	ctx := r.Context()
-// 	reqID := ctx_utils.GetReqID(ctx)
-// 	logger := cd.logger.WithFields(logrus.Fields{
+// 	logger := ld.logger.WithFields(logrus.Fields{
 // 		"url":    r.URL,
 // 		"req_id": reqID,
 // 	})
@@ -247,39 +202,35 @@ func (ld *LooksDelivery) updateLook(w http.ResponseWriter, r *http.Request) {
 // 		return
 // 	}
 
-// 	cd.logger = *cd.logger.WithFields(logrus.Fields{
+// 	ld.logger = *ld.logger.WithFields(logrus.Fields{
 // 		"user": user.Email,
 // 	}).Logger
 
-// 	queryParams := r.URL.Query()
-
-// 	limitStr := queryParams.Get("limit")
-// 	limitInt := 0
-// 	if limitStr != "" {
-// 		limitInt, err = strconv.Atoi(limitStr)
-// 		if err != nil || limitInt < 0 {
-// 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
-// 			ioutils.SendDefaultError(w, http.StatusBadRequest)
-// 			return
-// 		}
+// 	lidParam := r.URL.Query().Get("id")
+// 	if lidParam == "" {
+// 		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid look ID query param")
+// 		ioutils.SendDefaultError(w, http.StatusBadRequest)
+// 		return
 // 	}
-// 	offsetStr := queryParams.Get("offset")
-// 	offsetInt := 0
-// 	if offsetStr != "" {
-// 		offsetInt, err = strconv.Atoi(offsetStr)
-// 		if err != nil || offsetInt < 0 {
-// 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
-// 			ioutils.SendDefaultError(w, http.StatusBadRequest)
-// 			return
-// 		}
+// 	lid, err := strconv.ParseUint(lidParam, 10, 64)
+// 	if err != nil {
+// 		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse look ID")
+// 		ioutils.SendDefaultError(w, http.StatusBadRequest)
+// 		return
 // 	}
 
-// 	allClothes, status, err := cd.clothesUseCase.GetUsersClothes(ctx, limitInt, offsetInt, user.ID)
+// 	if lid == 0 {
+// 		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid Look ID")
+// 		ioutils.SendDefaultError(w, http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	look, status, err := ld.looksUseCase.DeleteLook(ctx, user.ID, lid)
 // 	if err != nil || status != http.StatusOK {
-// 		logger.WithField("status", status).Errorf("Failed to get user's clothes: %w", err)
+// 		logger.WithField("status", status).Errorf("Failed to delete look: %w", err)
 // 		ioutils.SendDefaultError(w, status)
 // 		return
 // 	}
 
-// 	ioutils.Send(w, status, allClothes)
+// 	ioutils.Send(w, status, look)
 // }

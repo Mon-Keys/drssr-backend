@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"drssr/config"
 	"drssr/internal/models"
 	"fmt"
@@ -296,7 +295,7 @@ func (pr *postgresqlRepository) DeleteUser(ctx context.Context, uid uint64) erro
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return nil
 		} else {
 			return err

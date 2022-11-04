@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"crypto/sha1"
-	"database/sql"
 	clothes_repository "drssr/internal/clothes/repository"
 	"drssr/internal/looks/repository"
 	"drssr/internal/models"
@@ -22,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,8 +29,7 @@ type ILooksUsecase interface {
 	AddLook(ctx context.Context, look models.Look) (models.Look, int, error)
 	UpdateLook(ctx context.Context, newLook models.Look, lid uint64, uid uint64) (models.Look, int, error)
 	GetLookByID(ctx context.Context, lid uint64, uid uint64) (models.Look, int, error)
-	// GetAllClothes(ctx context.Context, limit, offset int) (models.ArrayClothes, int, error)
-	// GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) (models.ArrayClothes, int, error)
+	// DeleteLook(ctx context.Context, uid uint64, lid uint64)
 }
 
 type looksUsecase struct {
@@ -161,7 +160,7 @@ func (lu *looksUsecase) UpdateLook(
 	// checking look in db
 	foundingLook, err := lu.psql.GetLookByID(ctx, lid)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return models.Look{},
 				http.StatusNotFound,
 				fmt.Errorf("LooksUsecase.UpdateLook: look not found")
@@ -309,7 +308,7 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64)
 	// checking look in db
 	foundingLook, err := lu.psql.GetLookByID(ctx, lid)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return models.Look{},
 				http.StatusNotFound,
 				fmt.Errorf("LooksUsecase.GetLookByID: look not found")
@@ -352,78 +351,3 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64)
 
 	return foundingLook, http.StatusOK, nil
 }
-
-// func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) (models.ArrayClothes, int, error) {
-// 	clothes, err := cu.psql.GetAllClothes(ctx, limit, offset)
-// 	if err != nil {
-// 		return nil,
-// 			http.StatusInternalServerError,
-// 			err
-// 	}
-
-// 	for i, v := range clothes {
-// 		img, err := ioutil.ReadFile(v.ImgPath)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
-
-// 		mask, err := ioutil.ReadFile(v.MaskPath)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-
-// 	}
-
-// 	return clothes, http.StatusOK, nil
-// }
-
-// func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) (models.ArrayClothes, int, error) {
-// 	clothes, err := cu.psql.GetUsersClothes(ctx, limit, offset, uid)
-// 	if err != nil {
-// 		return nil,
-// 			http.StatusInternalServerError,
-// 			err
-// 	}
-
-// 	for i, v := range clothes {
-// 		img, err := ioutil.ReadFile(v.ImgPath)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
-
-// 		mask, err := ioutil.ReadFile(v.MaskPath)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-
-// 	}
-
-// 	return clothes, http.StatusOK, nil
-// }
-
-// func isEnabledFileType(fileType string) bool {
-// 	imgTypes := map[string]bool{
-// 		"image/jpg":  true,
-// 		"image/jpeg": true,
-// 		"image/png":  true,
-// 		"image/webp": true,
-// 	}
-
-// 	return imgTypes[fileType]
-// }
-
-// func isEnabledExt(fileType string) bool {
-// 	imgTypes := map[string]bool{
-// 		".jpg":  true,
-// 		".jpeg": true,
-// 		".png":  true,
-// 	}
-
-// 	return imgTypes[fileType]
-// }

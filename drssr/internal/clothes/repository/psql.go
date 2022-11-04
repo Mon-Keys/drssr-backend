@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"drssr/config"
 	"drssr/internal/models"
 	"fmt"
@@ -14,13 +13,13 @@ import (
 type IPostgresqlRepository interface {
 	AddClothes(ctx context.Context, clothes models.Clothes) (models.Clothes, error)
 	DeleteClothes(ctx context.Context, cid uint64) error
-	AddClothesUserBind(ctx context.Context, uid uint64, cid uint64) (uint64, error)
-	DeleteClothesUserBind(ctx context.Context, bid uint64) error
+	UpdateClothes(ctx context.Context, newClothesData models.Clothes) (models.Clothes, error)
 	GetClothesMaskByTypeAndSex(ctx context.Context, clothesType string, clothesSex string) ([]models.Clothes, error)
 	GetAllClothes(ctx context.Context, limit, offset int) ([]models.Clothes, error)
 	GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) ([]models.Clothes, error)
 	AddSimilarityBind(ctx context.Context, mainCID uint64, secondCID uint64, percent int) (uint64, error)
 	DeleteSimilarityBind(ctx context.Context, bid uint64) error
+	DeleteSimilarityBindByClothesID(ctx context.Context, cid uint64) error
 	GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, error)
 }
 
@@ -60,8 +59,40 @@ func NewPostgresqlRepository(cfg config.PostgresConfig, logger logrus.Logger) IP
 func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.Clothes) (models.Clothes, error) {
 	var createdClothes models.Clothes
 	err := pr.conn.QueryRow(
-		`INSERT INTO clothes (type, color, img, mask, brand, sex)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO clothes (type, img, mask, owner_id)
+		VALUES ($1, $2, $3, $4)
+		RETURNING
+			id,
+			type,
+			img,
+			mask,
+			owner_id,
+			created_at;`,
+		clothes.Type,
+		clothes.ImgPath,
+		clothes.MaskPath,
+		clothes.OwnerID,
+	).Scan(
+		&createdClothes.ID,
+		&createdClothes.Type,
+		&createdClothes.ImgPath,
+		&createdClothes.MaskPath,
+		&createdClothes.OwnerID,
+		&createdClothes.Ctime,
+	)
+
+	if err != nil {
+		return models.Clothes{}, err
+	}
+	return createdClothes, nil
+}
+
+func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesData models.Clothes) (models.Clothes, error) {
+	var updatedClothes models.Clothes
+	err := pr.conn.QueryRow(
+		`UPDATE clothes
+		SET (color, brand, sex, link, price, currency) = ($2, $3, $4, $5, $6, $7)
+		WHERE id = $1
 		RETURNING
 			id,
 			type,
@@ -70,28 +101,37 @@ func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.C
 			mask,
 			brand,
 			sex,
+			link,
+			price,
+			currency,
+			owner_id,
 			created_at;`,
-		clothes.Type,
-		clothes.Color,
-		clothes.ImgPath,
-		clothes.MaskPath,
-		clothes.Brand,
-		clothes.Sex,
+		newClothesData.ID,
+		newClothesData.Color,
+		newClothesData.Brand,
+		newClothesData.Sex,
+		newClothesData.Link,
+		newClothesData.Price,
+		newClothesData.Currency,
 	).Scan(
-		&createdClothes.ID,
-		&createdClothes.Type,
-		&createdClothes.Color,
-		&createdClothes.ImgPath,
-		&createdClothes.MaskPath,
-		&createdClothes.Brand,
-		&createdClothes.Sex,
-		&createdClothes.Ctime,
+		&updatedClothes.ID,
+		&updatedClothes.Type,
+		&updatedClothes.Color,
+		&updatedClothes.ImgPath,
+		&updatedClothes.MaskPath,
+		&updatedClothes.Brand,
+		&updatedClothes.Sex,
+		&updatedClothes.Link,
+		&updatedClothes.Price,
+		&updatedClothes.Currency,
+		&updatedClothes.OwnerID,
+		&updatedClothes.Ctime,
 	)
 
 	if err != nil {
 		return models.Clothes{}, err
 	}
-	return createdClothes, nil
+	return updatedClothes, nil
 }
 
 func (pr *postgresqlRepository) DeleteClothes(ctx context.Context, cid uint64) error {
@@ -104,50 +144,13 @@ func (pr *postgresqlRepository) DeleteClothes(ctx context.Context, cid uint64) e
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return nil
 		} else {
 			return err
 		}
 	}
-	return nil
-}
 
-func (pr *postgresqlRepository) AddClothesUserBind(ctx context.Context, uid uint64, cid uint64) (uint64, error) {
-	var createdBindID uint64
-	err := pr.conn.QueryRow(
-		`INSERT INTO clothes_users (clothes_id, user_id)
-		VALUES ($1, $2)
-		RETURNING
-			id;`,
-		cid,
-		uid,
-	).Scan(
-		&createdBindID,
-	)
-
-	if err != nil {
-		return 0, err
-	}
-	return createdBindID, nil
-}
-
-func (pr *postgresqlRepository) DeleteClothesUserBind(ctx context.Context, bid uint64) error {
-	var deletedBindID uint64
-	err := pr.conn.QueryRow(
-		`DELETE FROM clothes_users WHERE id = $1 RETURNING id;`,
-		bid,
-	).Scan(
-		&deletedBindID,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		} else {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -216,7 +219,26 @@ func (pr *postgresqlRepository) DeleteSimilarityBind(ctx context.Context, bid ui
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
+			return nil
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pr *postgresqlRepository) DeleteSimilarityBindByClothesID(ctx context.Context, cid uint64) error {
+	var deletedBindID uint64
+	err := pr.conn.QueryRow(
+		`DELETE FROM similarity WHERE clothes1_id = $1 OR clothes2_id = $1 RETURNING id;`,
+		cid,
+	).Scan(
+		&deletedBindID,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
 			return nil
 		} else {
 			return err
@@ -226,7 +248,20 @@ func (pr *postgresqlRepository) DeleteSimilarityBind(ctx context.Context, bid ui
 }
 
 func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset int) ([]models.Clothes, error) {
-	query := `SELECT id, type, color, img, mask, brand, sex, created_at FROM clothes`
+	query := `SELECT
+		id,
+		type,
+		color,
+		img,
+		mask,
+		brand,
+		sex,
+		link,
+		price,
+		currency,
+		owner_id,
+		created_at
+	FROM clothes`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -252,6 +287,10 @@ func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset
 			&row.MaskPath,
 			&row.Brand,
 			&row.Sex,
+			&row.Link,
+			&row.Price,
+			&row.Currency,
+			&row.OwnerID,
 			&row.Ctime,
 		)
 		if err != nil {
@@ -267,8 +306,20 @@ func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset
 }
 
 func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) ([]models.Clothes, error) {
-	query := `SELECT c.id, c.type, c.color, c.img, c.mask, c.brand, c.sex, c.created_at
-	FROM clothes c JOIN clothes_users cu on c.id = cu.clothes_id AND cu.user_id=$1`
+	query := `SELECT
+		id,
+		type,
+		color,
+		img,
+		mask,
+		brand,
+		sex,
+		link,
+		price,
+		currency,
+		owner_id,
+		created_at
+	FROM clothes WHERE owner_id = $1`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -294,6 +345,10 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 			&row.MaskPath,
 			&row.Brand,
 			&row.Sex,
+			&row.Link,
+			&row.Price,
+			&row.Currency,
+			&row.OwnerID,
 			&row.Ctime,
 		)
 		if err != nil {
@@ -311,16 +366,34 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 func (pr *postgresqlRepository) GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, error) {
 	var clothes models.Clothes
 	err := pr.conn.QueryRow(
-		`SELECT id, type, color, img, mask, brand, sex, created_at FROM clothes WHERE id = $1;`,
+		`SELECT
+			id,
+			type,
+			color,
+			img,
+			mask,
+			brand,
+			sex,
+			link,
+			price,
+			currency,
+			owner_id,
+			created_at
+		FROM clothes
+		WHERE id = $1;`,
 		cid,
 	).Scan(
 		&clothes.ID,
 		&clothes.Type,
 		&clothes.Color,
 		&clothes.ImgPath,
-		&clothes.Mask,
+		&clothes.MaskPath,
 		&clothes.Brand,
 		&clothes.Sex,
+		&clothes.Link,
+		&clothes.Price,
+		&clothes.Currency,
+		&clothes.OwnerID,
 		&clothes.Ctime,
 	)
 	if err != nil {

@@ -10,3 +10,8 @@ const (
 const (
 	GetClothesLimit = 1000
 )
+
+// looks
+const (
+	GetLooksLimit = 1000
+)

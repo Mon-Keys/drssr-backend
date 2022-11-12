@@ -12,13 +12,15 @@ import (
 
 type IPostgresqlRepository interface {
 	AddLook(ctx context.Context, look models.Look) (models.Look, error)
-	DeleteLook(ctx context.Context, lid uint64) error
+	DeleteLook(ctx context.Context, lid uint64) (models.Look, error)
 	AddLookClothesBind(ctx context.Context, clothes models.ClothesStruct, lid uint64) (models.ClothesStruct, error)
 	DeleteLookClothesBind(ctx context.Context, bid uint64) error
 	GetLookByID(ctx context.Context, lid uint64) (models.Look, error)
 	UpdateLookByID(ctx context.Context, lid uint64, newLook models.Look) (models.Look, error)
 	DeleteLookClothesBindsByID(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
 	GetLookClothes(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
+	GetUserLooks(ctx context.Context, limit, offset int, uid uint64) ([]models.Look, error)
+	GetAllLooks(ctx context.Context, limit, offset int) ([]models.Look, error)
 }
 
 type postgresqlRepository struct {
@@ -82,23 +84,33 @@ func (pr *postgresqlRepository) AddLook(ctx context.Context, look models.Look) (
 	return createdLook, nil
 }
 
-func (pr *postgresqlRepository) DeleteLook(ctx context.Context, lid uint64) error {
-	var deletedLookID uint64
+func (pr *postgresqlRepository) DeleteLook(ctx context.Context, lid uint64) (models.Look, error) {
+	var deletedLook models.Look
 	err := pr.conn.QueryRow(
-		`DELETE FROM looks WHERE id = $1 RETURNING id;`,
+		`DELETE FROM looks WHERE id = $1
+		RETURNING
+			id,
+			img,
+			description,
+			creator_id,
+			created_at;`,
 		lid,
 	).Scan(
-		&deletedLookID,
+		&deletedLook.ID,
+		&deletedLook.ImgPath,
+		&deletedLook.Description,
+		&deletedLook.CreatorID,
+		&deletedLook.Ctime,
 	)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil
+			return models.Look{}, nil
 		} else {
-			return err
+			return models.Look{}, err
 		}
 	}
-	return nil
+	return deletedLook, nil
 }
 
 func (pr *postgresqlRepository) AddLookClothesBind(
@@ -149,13 +161,14 @@ func (pr *postgresqlRepository) DeleteLookClothesBind(ctx context.Context, bid u
 func (pr *postgresqlRepository) GetLookByID(ctx context.Context, lid uint64) (models.Look, error) {
 	var look models.Look
 	err := pr.conn.QueryRow(
-		`SELECT id, img, description, creator_id FROM looks WHERE id = $1;`,
+		`SELECT id, img, description, creator_id, created_at FROM looks WHERE id = $1;`,
 		lid,
 	).Scan(
 		&look.ID,
 		&look.ImgPath,
 		&look.Description,
 		&look.CreatorID,
+		&look.Ctime,
 	)
 	if err != nil {
 		return models.Look{}, err
@@ -174,7 +187,7 @@ func (pr *postgresqlRepository) UpdateLookByID(
 		`UPDATE looks
 		SET (img, description) = ($2, $3)
 		WHERE id = $1
-		RETURNING id, img, description;`,
+		RETURNING id, img, description, creator_id, created_at;`,
 		lid,
 		newLook.ImgPath,
 		newLook.Description,
@@ -182,6 +195,8 @@ func (pr *postgresqlRepository) UpdateLookByID(
 		&updatedLook.ID,
 		&updatedLook.ImgPath,
 		&updatedLook.Description,
+		&updatedLook.CreatorID,
+		&updatedLook.Ctime,
 	)
 
 	if err != nil {
@@ -260,6 +275,94 @@ func (pr *postgresqlRepository) DeleteLookClothesBindsByID(
 	}
 	if err := rows.Err(); err != nil {
 		return []models.ClothesStruct{}, err
+	}
+
+	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetUserLooks(ctx context.Context, limit, offset int, uid uint64) ([]models.Look, error) {
+	query := `SELECT
+		id,
+		img,
+		description,
+		creator_id,
+		created_at
+	FROM looks WHERE creator_id = $1;`
+	var l string
+	if limit > 0 {
+		l = fmt.Sprintf(" LIMIT %d", limit)
+	}
+	var o string
+	if offset > 0 {
+		o = fmt.Sprintf(" OFFSET %d", offset)
+	}
+	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o), uid)
+	if err != nil {
+		return []models.Look{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.Look
+	var row models.Look
+	for rows.Next() {
+		err := rows.Scan(
+			&row.ID,
+			&row.ImgPath,
+			&row.Description,
+			&row.CreatorID,
+			&row.Ctime,
+		)
+		if err != nil {
+			return []models.Look{}, err
+		}
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.Look{}, err
+	}
+
+	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetAllLooks(ctx context.Context, limit, offset int) ([]models.Look, error) {
+	query := `SELECT
+		id,
+		img,
+		description,
+		creator_id,
+		created_at
+	FROM looks;`
+	var l string
+	if limit > 0 {
+		l = fmt.Sprintf(" LIMIT %d", limit)
+	}
+	var o string
+	if offset > 0 {
+		o = fmt.Sprintf(" OFFSET %d", offset)
+	}
+	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o))
+	if err != nil {
+		return []models.Look{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.Look
+	var row models.Look
+	for rows.Next() {
+		err := rows.Scan(
+			&row.ID,
+			&row.ImgPath,
+			&row.Description,
+			&row.CreatorID,
+			&row.Ctime,
+		)
+		if err != nil {
+			return []models.Look{}, err
+		}
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.Look{}, err
 	}
 
 	return respList, nil

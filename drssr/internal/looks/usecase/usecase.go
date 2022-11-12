@@ -28,8 +28,11 @@ import (
 type ILooksUsecase interface {
 	AddLook(ctx context.Context, look models.Look) (models.Look, int, error)
 	UpdateLook(ctx context.Context, newLook models.Look, lid uint64, uid uint64) (models.Look, int, error)
-	GetLookByID(ctx context.Context, lid uint64, uid uint64) (models.Look, int, error)
-	// DeleteLook(ctx context.Context, uid uint64, lid uint64)
+	DeleteLook(ctx context.Context, uid uint64, lid uint64) (int, error)
+
+	GetLookByID(ctx context.Context, lid uint64) (models.Look, int, error)
+	GetUserLooks(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayLooks, int, error)
+	GetAllLooks(ctx context.Context, limit int, offset int) (models.ArrayLooks, int, error)
 }
 
 type looksUsecase struct {
@@ -107,7 +110,7 @@ func (lu *looksUsecase) AddLook(
 	}
 
 	rb.Add(func() {
-		err := lu.psql.DeleteLook(ctx, createdLook.ID)
+		_, err := lu.psql.DeleteLook(ctx, createdLook.ID)
 		if err != nil {
 			lu.logger.Errorf("LooksUsecase.AddLook: failed to rollback saving of look in db: %w", err)
 		}
@@ -304,7 +307,91 @@ func (lu *looksUsecase) UpdateLook(
 	return updatedLook, http.StatusOK, nil
 }
 
-func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64) (models.Look, int, error) {
+func (lu *looksUsecase) DeleteLook(ctx context.Context, uid uint64, lid uint64) (int, error) {
+	// checking look in db
+	foundingLook, err := lu.psql.GetLookByID(ctx, lid)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return http.StatusNotFound, fmt.Errorf("LooksUsecase.DeleteLook: look not found")
+		}
+		return http.StatusInternalServerError, fmt.Errorf("LooksUsecase.DeleteLook: failed to found look in db")
+	}
+
+	if uid != foundingLook.CreatorID {
+		return http.StatusForbidden, fmt.Errorf("LooksUsecase.DeleteLook: can't delete not user's look")
+	}
+
+	// deleting look-clothes binds
+	deletedBinds, err := lu.psql.DeleteLookClothesBindsByID(ctx, lid)
+	if err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("LooksUsecase.DeleteLook: failed to delete old look's binds: %w", err)
+	}
+
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	rb.Add(func() {
+		for _, clothes := range deletedBinds {
+			_, err := lu.psql.AddLookClothesBind(ctx, clothes, lid)
+			if err != nil {
+				rb.Run()
+
+				lu.logger.Errorf("LooksUsecase.DeleteLook: failed to rollback deleting of old look's binds: %w", err)
+			}
+		}
+	})
+
+	// deleting look
+	deletedLook, err := lu.psql.DeleteLook(ctx, lid)
+	if err != nil {
+		rb.Run()
+
+		return http.StatusInternalServerError, fmt.Errorf("LooksUsecase.DeleteLook: failed to delete look from db: %w", err)
+	}
+
+	rb.Add(func() {
+		_, err := lu.psql.AddLook(ctx, deletedLook)
+		if err != nil {
+			lu.logger.Errorf("LooksUsecase.DeleteLook: failed to rollback deleting of look from db: %w", err)
+		}
+	})
+
+	return http.StatusOK, nil
+}
+
+func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayLooks, int, error) {
+	looks, err := lu.psql.GetUserLooks(ctx, limit, offset, uid)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, http.StatusNotFound, fmt.Errorf("LooksUsecase.GetUserLooks: user don't have any looks")
+		}
+		return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to get user looks from db: %w", err)
+	}
+
+	for i := range looks {
+		clothes, err := lu.psql.GetLookClothes(ctx, looks[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to get look's clothes from db: %w", err)
+		}
+
+		looks[i].Clothes = clothes
+
+		f, err := os.Open(looks[i].ImgPath)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to open look's img file")
+		}
+
+		bytesImg, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file")
+		}
+
+		looks[i].Img = base64.StdEncoding.EncodeToString(bytesImg)
+	}
+
+	return looks, http.StatusOK, nil
+}
+
+func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Look, int, error) {
 	// checking look in db
 	foundingLook, err := lu.psql.GetLookByID(ctx, lid)
 	if err != nil {
@@ -318,12 +405,6 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64)
 			fmt.Errorf("LooksUsecase.GetLookByID: failed to found look in db")
 	}
 
-	if uid != foundingLook.CreatorID {
-		return models.Look{},
-			http.StatusForbidden,
-			fmt.Errorf("LooksUsecase.GetLookByID: can't update not user's look")
-	}
-
 	clothes, err := lu.psql.GetLookClothes(ctx, lid)
 	if err != nil {
 		return models.Look{},
@@ -331,7 +412,7 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64)
 			fmt.Errorf("LooksUsecase.GetLookByID: failed to get clothes from db")
 	}
 
-	foundingLook.Clothes = append(foundingLook.Clothes, clothes...)
+	foundingLook.Clothes = clothes
 
 	f, err := os.Open(foundingLook.ImgPath)
 	if err != nil {
@@ -350,4 +431,37 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64, uid uint64)
 	foundingLook.Img = base64.StdEncoding.EncodeToString(bytesImg)
 
 	return foundingLook, http.StatusOK, nil
+}
+
+func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) (models.ArrayLooks, int, error) {
+	looks, err := lu.psql.GetAllLooks(ctx, limit, offset)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, http.StatusNotFound, fmt.Errorf("LooksUsecase.GetAllLooks: not found any looks")
+		}
+		return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to get looks from db: %w", err)
+	}
+
+	for i := range looks {
+		clothes, err := lu.psql.GetLookClothes(ctx, looks[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to get look's clothes from db: %w", err)
+		}
+
+		looks[i].Clothes = clothes
+
+		f, err := os.Open(looks[i].ImgPath)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to open look's img file")
+		}
+
+		bytesImg, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file")
+		}
+
+		looks[i].Img = base64.StdEncoding.EncodeToString(bytesImg)
+	}
+
+	return looks, http.StatusOK, nil
 }

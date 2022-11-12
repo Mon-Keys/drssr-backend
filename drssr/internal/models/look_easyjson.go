@@ -69,8 +69,6 @@ func easyjson9db9635DecodeDrssrInternalModels(in *jlexer.Lexer, out *Look) {
 			}
 		case "img":
 			out.Img = string(in.String())
-		case "preview":
-			out.Preview = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -125,11 +123,6 @@ func easyjson9db9635EncodeDrssrInternalModels(out *jwriter.Writer, in Look) {
 		const prefix string = ",\"img\":"
 		out.RawString(prefix)
 		out.String(string(in.Img))
-	}
-	{
-		const prefix string = ",\"preview\":"
-		out.RawString(prefix)
-		out.String(string(in.Preview))
 	}
 	out.RawByte('}')
 }
@@ -309,4 +302,70 @@ func (v *ClothesStruct) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ClothesStruct) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson9db9635DecodeDrssrInternalModels2(l, v)
+}
+func easyjson9db9635DecodeDrssrInternalModels3(in *jlexer.Lexer, out *ArrayLooks) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		in.Skip()
+		*out = nil
+	} else {
+		in.Delim('[')
+		if *out == nil {
+			if !in.IsDelim(']') {
+				*out = make(ArrayLooks, 0, 0)
+			} else {
+				*out = ArrayLooks{}
+			}
+		} else {
+			*out = (*out)[:0]
+		}
+		for !in.IsDelim(']') {
+			var v4 Look
+			(v4).UnmarshalEasyJSON(in)
+			*out = append(*out, v4)
+			in.WantComma()
+		}
+		in.Delim(']')
+	}
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson9db9635EncodeDrssrInternalModels3(out *jwriter.Writer, in ArrayLooks) {
+	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v5, v6 := range in {
+			if v5 > 0 {
+				out.RawByte(',')
+			}
+			(v6).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v ArrayLooks) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson9db9635EncodeDrssrInternalModels3(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v ArrayLooks) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson9db9635EncodeDrssrInternalModels3(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *ArrayLooks) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson9db9635DecodeDrssrInternalModels3(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *ArrayLooks) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson9db9635DecodeDrssrInternalModels3(l, v)
 }

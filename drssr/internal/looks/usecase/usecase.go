@@ -6,16 +6,12 @@ import (
 	clothes_repository "drssr/internal/clothes/repository"
 	"drssr/internal/looks/repository"
 	"drssr/internal/models"
-	"drssr/internal/pkg/classifier"
 	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
-	"drssr/internal/pkg/cutter"
 	"drssr/internal/pkg/rollback"
-	"drssr/internal/pkg/similarity"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -36,12 +32,9 @@ type ILooksUsecase interface {
 }
 
 type looksUsecase struct {
-	psql             repository.IPostgresqlRepository
-	clothesPsql      clothes_repository.IPostgresqlRepository
-	cutterClient     cutter.Client
-	classifierClient classifier.RecognizeAPIClient
-	similarityClient similarity.Client
-	logger           logrus.Logger
+	psql        repository.IPostgresqlRepository
+	clothesPsql clothes_repository.IPostgresqlRepository
+	logger      logrus.Logger
 }
 
 func NewLooksUsecase(
@@ -77,7 +70,7 @@ func (lu *looksUsecase) AddLook(
 			fmt.Errorf("LooksUsecase.AddLook: failed to decode base64 into byte slice: %w", err)
 	}
 
-	today := time.Now().Format("02-24-2006")
+	today := time.Now().Format("2006-01-02")
 	folderNameByte := sha1.New().Sum([]byte(today))
 	folderName := hex.EncodeToString(folderNameByte)
 
@@ -196,7 +189,7 @@ func (lu *looksUsecase) UpdateLook(
 			fmt.Errorf("LooksUsecase.UpdateLook: failed to decode base64 into byte slice: %w", err)
 	}
 
-	today := time.Now().Format("02-24-2006")
+	today := time.Now().Format("2006-01-02")
 	folderNameByte := sha1.New().Sum([]byte(today))
 	folderName := hex.EncodeToString(folderNameByte)
 
@@ -375,17 +368,12 @@ func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int,
 
 		looks[i].Clothes = clothes
 
-		f, err := os.Open(looks[i].ImgPath)
+		decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to open look's img file")
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file into base64: %w", err)
 		}
 
-		bytesImg, err := ioutil.ReadAll(f)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file")
-		}
-
-		looks[i].Img = base64.StdEncoding.EncodeToString(bytesImg)
+		looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil
@@ -402,33 +390,26 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Loo
 		}
 		return models.Look{},
 			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.GetLookByID: failed to found look in db")
+			fmt.Errorf("LooksUsecase.GetLookByID: failed to found look in db: %w", err)
 	}
 
 	clothes, err := lu.psql.GetLookClothes(ctx, lid)
 	if err != nil {
 		return models.Look{},
 			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.GetLookByID: failed to get clothes from db")
+			fmt.Errorf("LooksUsecase.GetLookByID: failed to get clothes from db: %w", err)
 	}
 
 	foundingLook.Clothes = clothes
 
-	f, err := os.Open(foundingLook.ImgPath)
+	decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
 	if err != nil {
 		return models.Look{},
 			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.GetLookByID: failed to open look's img file")
+			fmt.Errorf("LooksUsecase.GetLookByID: failed to read img file into base64: %w", err)
 	}
 
-	bytesImg, err := ioutil.ReadAll(f)
-	if err != nil {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.GetLookByID: failed to read img file")
-	}
-
-	foundingLook.Img = base64.StdEncoding.EncodeToString(bytesImg)
+	foundingLook.Img = decodedLookImg
 
 	return foundingLook, http.StatusOK, nil
 }
@@ -450,17 +431,12 @@ func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) 
 
 		looks[i].Clothes = clothes
 
-		f, err := os.Open(looks[i].ImgPath)
+		decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
 		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to open look's img file")
+			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file into base64: %w", err)
 		}
 
-		bytesImg, err := ioutil.ReadAll(f)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file")
-		}
-
-		looks[i].Img = base64.StdEncoding.EncodeToString(bytesImg)
+		looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil

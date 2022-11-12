@@ -30,7 +30,7 @@ func SetLooksRouting(
 		logger:       logger,
 	}
 
-	// clothes API
+	// looks API
 	looksPrivateAPI := router.PathPrefix("/api/v1/private/looks").Subrouter()
 	looksPrivateAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
@@ -137,7 +137,7 @@ func (ld *LooksDelivery) updateLook(w http.ResponseWriter, r *http.Request) {
 
 	updatedLook, status, err := ld.looksUseCase.UpdateLook(ctx, look, lid, user.ID)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		logger.WithField("status", status).Errorf("Failed to update look: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -234,14 +234,14 @@ func (ld *LooksDelivery) getUserLooks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	look, status, err := ld.looksUseCase.GetUserLooks(ctx, user.ID, limitInt, offsetInt)
+	looks, status, err := ld.looksUseCase.GetUserLooks(ctx, user.ID, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		logger.WithField("status", status).Errorf("Failed to get users's looks: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
 
-	ioutils.Send(w, status, look)
+	ioutils.Send(w, status, looks)
 }
 
 func (ld *LooksDelivery) getLook(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +273,7 @@ func (ld *LooksDelivery) getLook(w http.ResponseWriter, r *http.Request) {
 
 	look, status, err := ld.looksUseCase.GetLookByID(ctx, lid)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		logger.WithField("status", status).Errorf("Failed to get look by ID: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -313,12 +313,12 @@ func (ld *LooksDelivery) getAllLooks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	look, status, err := ld.looksUseCase.GetAllLooks(ctx, limitInt, offsetInt)
+	looks, status, err := ld.looksUseCase.GetAllLooks(ctx, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
+		logger.WithField("status", status).Errorf("Failed to get looks: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
 
-	ioutils.Send(w, status, look)
+	ioutils.Send(w, status, looks)
 }

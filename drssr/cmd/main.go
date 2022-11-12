@@ -5,9 +5,15 @@ import (
 	clothes_delivery "drssr/internal/clothes/delivery"
 	clothes_repository "drssr/internal/clothes/repository"
 	clothes_usecase "drssr/internal/clothes/usecase"
+
 	looks_delivery "drssr/internal/looks/delivery"
 	looks_repository "drssr/internal/looks/repository"
 	looks_usecase "drssr/internal/looks/usecase"
+
+	posts_delivery "drssr/internal/posts/delivery"
+	posts_repository "drssr/internal/posts/repository"
+	posts_usecase "drssr/internal/posts/usecase"
+
 	"drssr/internal/pkg/classifier"
 	"drssr/internal/pkg/cutter"
 	middleware "drssr/internal/pkg/middlewares"
@@ -39,6 +45,7 @@ func main() {
 	rdr := user_repository.NewRedisRepository(config.Redis, *logger)
 	cr := clothes_repository.NewPostgresqlRepository(config.Postgres, *logger)
 	lr := looks_repository.NewPostgresqlRepository(config.Postgres, *logger)
+	pr := posts_repository.NewPostgresqlRepository(config.Postgres, *logger)
 
 	// router
 	router := mux.NewRouter()
@@ -59,6 +66,7 @@ func main() {
 		*logger,
 	)
 	lu := looks_usecase.NewLooksUsecase(lr, cr, *logger)
+	pu := posts_usecase.NewPostsUsecase(pr, cr, lr, *logger)
 
 	// middlewars
 	authMw := middleware.NewAuthMiddleware(uu, *logger)
@@ -67,6 +75,7 @@ func main() {
 	user_delivery.SetUserRouting(router, uu, authMw, *logger)
 	clothes_delivery.SetClothesRouting(router, cu, authMw, *logger)
 	looks_delivery.SetLooksRouting(router, lu, authMw, *logger)
+	posts_delivery.SetPostsRouting(router, pu, authMw, *logger)
 
 	srv := &http.Server{
 		Handler:      router,

@@ -3,14 +3,32 @@ package common
 import (
 	"bytes"
 	"drssr/internal/pkg/consts"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
 )
+
+func ReadFileIntoBase64(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file")
+	}
+
+	bytesImg, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file")
+	}
+
+	decodedFile := base64.StdEncoding.EncodeToString(bytesImg)
+
+	return decodedFile, nil
+}
 
 func OpenFileFromReq(r *http.Request, fileName string) (*multipart.File, *multipart.FileHeader, int, error) {
 	files := r.MultipartForm.File[fileName]

@@ -4,6 +4,7 @@ package consts
 const (
 	MaxUploadFileSize   = 5 << 20 // 5MB
 	LooksBaseFolderPath = "./looks"
+	PostsBaseFolderPath = "./posts"
 )
 
 // clothes

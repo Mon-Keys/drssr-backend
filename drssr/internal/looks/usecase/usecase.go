@@ -299,6 +299,10 @@ func (lu *looksUsecase) UpdateLook(
 			fmt.Errorf("LooksUsecase.UpdateLook: failed to delete old look's img file: %w", err)
 	}
 
+	// TODO: change this hack
+	updatedLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, updatedLook.ImgPath, "")
+
+	// TODO: delete after testing
 	// updatedLook.Img = newLook.Img
 
 	return updatedLook, http.StatusOK, nil
@@ -372,6 +376,10 @@ func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int,
 
 		looks[i].Clothes = clothes
 
+		// TODO: change this hack
+		looks[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, looks[i].ImgPath, "")
+
+		// TODO: delete after testing
 		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
 		// if err != nil {
 		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file into base64: %w", err)
@@ -406,6 +414,10 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Loo
 
 	foundingLook.Clothes = clothes
 
+	// TODO: change this hack
+	foundingLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, foundingLook.ImgPath, "")
+
+	// TODO: delete after testing
 	// decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
 	// if err != nil {
 	// 	return models.Look{},
@@ -435,6 +447,10 @@ func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) 
 
 		looks[i].Clothes = clothes
 
+		// TODO: change this hack
+		looks[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, looks[i].ImgPath, "")
+
+		// TODO: delete after testing
 		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
 		// if err != nil {
 		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file into base64: %w", err)

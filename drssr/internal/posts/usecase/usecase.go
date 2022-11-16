@@ -76,6 +76,11 @@ func (pu *postsUsecase) generateClothesElement(
 			fmt.Errorf("can't create post with not owner clothes")
 	}
 
+	// TODO: change this hack
+	postClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, postClothes.ImgPath, "")
+	postClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, postClothes.MaskPath, "")
+
+	// TODO: delete after testing
 	// // decoding img
 	// decodedImg, err := common.ReadFileIntoBase64(postClothes.ImgPath)
 	// if err != nil {
@@ -134,6 +139,13 @@ func (pu *postsUsecase) generateLookElement(
 
 	postLook.Clothes = clothes
 
+	// TODO: change this hack
+	postLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, postLook.ImgPath, "")
+	for i := range postLook.Clothes {
+		postLook.Clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, postLook.Clothes[i].ImgPath, "")
+	}
+
+	// TODO: delete after testing
 	// // decoding look's img
 	// decodedLookImg, err := common.ReadFileIntoBase64(postLook.ImgPath)
 	// if err != nil {
@@ -267,6 +279,12 @@ func (pu *postsUsecase) AddPost(
 		}
 	})
 
+	// TODO: change this hack
+	for i := range createdPost.PreviewsPaths {
+		createdPost.PreviewsPaths[i] = strings.ReplaceAll(consts.HomeDirectory, createdPost.PreviewsPaths[i], "")
+	}
+
+	// TODO: delete after testing
 	// createdPost.Previews = post.Previews
 	createdPost.Clothes = post.Clothes
 	createdPost.Look = post.Look
@@ -353,6 +371,12 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
 
+		// TODO: change this hack
+		for j := range posts[i].PreviewsPaths {
+			posts[i].PreviewsPaths[j] = strings.ReplaceAll(consts.HomeDirectory, posts[i].PreviewsPaths[j], "")
+		}
+
+		// TODO: delete after testing
 		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
 
 		// for _, previewPath := range posts[i].PreviewsPaths {
@@ -391,6 +415,12 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 		return models.Post{}, status, fmt.Errorf("PostsUsecase.GetPostByID: failed to generate post's element: %w", err)
 	}
 
+	// TODO: change this hack
+	for i := range foundingPost.PreviewsPaths {
+		foundingPost.PreviewsPaths[i] = strings.ReplaceAll(consts.HomeDirectory, foundingPost.PreviewsPaths[i], "")
+	}
+
+	// TODO: detete after testing
 	// foundingPost.Previews = make(map[string]string, len(foundingPost.PreviewsPaths))
 
 	// for _, previewPath := range foundingPost.PreviewsPaths {
@@ -424,6 +454,12 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
 
+		// TODO: change this hack
+		for j := range posts[i].PreviewsPaths {
+			posts[i].PreviewsPaths[j] = strings.ReplaceAll(consts.HomeDirectory, posts[i].PreviewsPaths[j], "")
+		}
+
+		// TODO: delete after testing
 		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
 
 		// for _, previewPath := range posts[i].PreviewsPaths {

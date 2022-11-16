@@ -7,12 +7,14 @@ import (
 	"drssr/internal/models"
 	"drssr/internal/pkg/classifier"
 	"drssr/internal/pkg/common"
+	"drssr/internal/pkg/consts"
 	"drssr/internal/pkg/cutter"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/pkg/similarity"
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -113,6 +115,11 @@ func (cu *clothesUsecase) AddFile(
 		}
 	})
 
+	// TODO: change this hack
+	createdClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, createdClothes.ImgPath, "")
+	createdClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, createdClothes.MaskPath, "")
+
+	// TODO: delete after testing
 	// createdClothes.Img = res.Img
 	// createdClothes.Mask = res.Mask
 
@@ -145,6 +152,11 @@ func (cu *clothesUsecase) UpdateClothes(
 			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to update clothes in db: %w", err)
 	}
 
+	// TODO: change this hack
+	updatedClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, updatedClothes.ImgPath, "")
+	updatedClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, updatedClothes.MaskPath, "")
+
+	// TODO: delete after testing
 	// img, err := ioutil.ReadFile(updatedClothes.ImgPath)
 	// if err != nil {
 	// 	return models.Clothes{},
@@ -255,6 +267,13 @@ func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) 
 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to get clothes from db: %w", err)
 	}
 
+	// TODO: change this hack
+	for i := range clothes {
+		clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].ImgPath, "")
+		clothes[i].MaskPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].MaskPath, "")
+	}
+
+	// TODO: delete after testing
 	// for i, v := range clothes {
 	// 	img, err := ioutil.ReadFile(v.ImgPath)
 	// 	if err != nil {
@@ -284,6 +303,12 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 		return nil,
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to get clothes from db: %w", err)
+	}
+
+	// TODO: change this hack
+	for i := range clothes {
+		clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].ImgPath, "")
+		clothes[i].MaskPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].MaskPath, "")
 	}
 
 	// for i, v := range clothes {

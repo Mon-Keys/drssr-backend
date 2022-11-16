@@ -16,3 +16,7 @@ const (
 const (
 	GetLooksLimit = 1000
 )
+
+// TODO: CHANGE!!!!!!!
+// oh oh oh DIRTY hack
+const HomeDirectory = "/home/pierrelean/drssr-backend/"

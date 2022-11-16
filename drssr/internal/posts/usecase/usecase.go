@@ -77,8 +77,8 @@ func (pu *postsUsecase) generateClothesElement(
 	}
 
 	// TODO: change this hack
-	postClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, postClothes.ImgPath, "")
-	postClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, postClothes.MaskPath, "")
+	postClothes.ImgPath = strings.ReplaceAll(postClothes.ImgPath, consts.HomeDirectory, "")
+	postClothes.MaskPath = strings.ReplaceAll(postClothes.MaskPath, consts.HomeDirectory, "")
 
 	// TODO: delete after testing
 	// // decoding img
@@ -140,9 +140,9 @@ func (pu *postsUsecase) generateLookElement(
 	postLook.Clothes = clothes
 
 	// TODO: change this hack
-	postLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, postLook.ImgPath, "")
+	postLook.ImgPath = strings.ReplaceAll(postLook.ImgPath, consts.HomeDirectory, "")
 	for i := range postLook.Clothes {
-		postLook.Clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, postLook.Clothes[i].ImgPath, "")
+		postLook.Clothes[i].ImgPath = strings.ReplaceAll(postLook.Clothes[i].ImgPath, consts.HomeDirectory, "")
 	}
 
 	// TODO: delete after testing
@@ -281,7 +281,7 @@ func (pu *postsUsecase) AddPost(
 
 	// TODO: change this hack
 	for i := range createdPost.PreviewsPaths {
-		createdPost.PreviewsPaths[i] = strings.ReplaceAll(consts.HomeDirectory, createdPost.PreviewsPaths[i], "")
+		createdPost.PreviewsPaths[i] = strings.ReplaceAll(createdPost.PreviewsPaths[i], consts.HomeDirectory, "")
 	}
 
 	// TODO: delete after testing
@@ -373,7 +373,7 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 
 		// TODO: change this hack
 		for j := range posts[i].PreviewsPaths {
-			posts[i].PreviewsPaths[j] = strings.ReplaceAll(consts.HomeDirectory, posts[i].PreviewsPaths[j], "")
+			posts[i].PreviewsPaths[j] = strings.ReplaceAll(posts[i].PreviewsPaths[j], consts.HomeDirectory, "")
 		}
 
 		// TODO: delete after testing
@@ -417,7 +417,7 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 
 	// TODO: change this hack
 	for i := range foundingPost.PreviewsPaths {
-		foundingPost.PreviewsPaths[i] = strings.ReplaceAll(consts.HomeDirectory, foundingPost.PreviewsPaths[i], "")
+		foundingPost.PreviewsPaths[i] = strings.ReplaceAll(foundingPost.PreviewsPaths[i], consts.HomeDirectory, "")
 	}
 
 	// TODO: detete after testing
@@ -456,7 +456,7 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 
 		// TODO: change this hack
 		for j := range posts[i].PreviewsPaths {
-			posts[i].PreviewsPaths[j] = strings.ReplaceAll(consts.HomeDirectory, posts[i].PreviewsPaths[j], "")
+			posts[i].PreviewsPaths[j] = strings.ReplaceAll(posts[i].PreviewsPaths[j], consts.HomeDirectory, "")
 		}
 
 		// TODO: delete after testing

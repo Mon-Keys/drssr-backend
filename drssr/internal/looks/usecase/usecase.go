@@ -300,7 +300,7 @@ func (lu *looksUsecase) UpdateLook(
 	}
 
 	// TODO: change this hack
-	updatedLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, updatedLook.ImgPath, "")
+	updatedLook.ImgPath = strings.ReplaceAll(updatedLook.ImgPath, consts.HomeDirectory, "")
 
 	// TODO: delete after testing
 	// updatedLook.Img = newLook.Img
@@ -377,7 +377,7 @@ func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int,
 		looks[i].Clothes = clothes
 
 		// TODO: change this hack
-		looks[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, looks[i].ImgPath, "")
+		looks[i].ImgPath = strings.ReplaceAll(looks[i].ImgPath, consts.HomeDirectory, "")
 
 		// TODO: delete after testing
 		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
@@ -415,7 +415,7 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Loo
 	foundingLook.Clothes = clothes
 
 	// TODO: change this hack
-	foundingLook.ImgPath = strings.ReplaceAll(consts.HomeDirectory, foundingLook.ImgPath, "")
+	foundingLook.ImgPath = strings.ReplaceAll(foundingLook.ImgPath, consts.HomeDirectory, "")
 
 	// TODO: delete after testing
 	// decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
@@ -448,7 +448,7 @@ func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) 
 		looks[i].Clothes = clothes
 
 		// TODO: change this hack
-		looks[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, looks[i].ImgPath, "")
+		looks[i].ImgPath = strings.ReplaceAll(looks[i].ImgPath, consts.HomeDirectory, "")
 
 		// TODO: delete after testing
 		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)

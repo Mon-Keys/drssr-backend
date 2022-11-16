@@ -116,8 +116,8 @@ func (cu *clothesUsecase) AddFile(
 	})
 
 	// TODO: change this hack
-	createdClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, createdClothes.ImgPath, "")
-	createdClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, createdClothes.MaskPath, "")
+	createdClothes.ImgPath = strings.ReplaceAll(createdClothes.ImgPath, consts.HomeDirectory, "")
+	createdClothes.MaskPath = strings.ReplaceAll(createdClothes.MaskPath, consts.HomeDirectory, "")
 
 	// TODO: delete after testing
 	// createdClothes.Img = res.Img
@@ -153,8 +153,8 @@ func (cu *clothesUsecase) UpdateClothes(
 	}
 
 	// TODO: change this hack
-	updatedClothes.ImgPath = strings.ReplaceAll(consts.HomeDirectory, updatedClothes.ImgPath, "")
-	updatedClothes.MaskPath = strings.ReplaceAll(consts.HomeDirectory, updatedClothes.MaskPath, "")
+	updatedClothes.ImgPath = strings.ReplaceAll(updatedClothes.ImgPath, consts.HomeDirectory, "")
+	updatedClothes.MaskPath = strings.ReplaceAll(updatedClothes.MaskPath, consts.HomeDirectory, "")
 
 	// TODO: delete after testing
 	// img, err := ioutil.ReadFile(updatedClothes.ImgPath)
@@ -269,8 +269,8 @@ func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) 
 
 	// TODO: change this hack
 	for i := range clothes {
-		clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].ImgPath, "")
-		clothes[i].MaskPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].MaskPath, "")
+		clothes[i].ImgPath = strings.ReplaceAll(clothes[i].ImgPath, consts.HomeDirectory, "")
+		clothes[i].MaskPath = strings.ReplaceAll(clothes[i].MaskPath, consts.HomeDirectory, "")
 	}
 
 	// TODO: delete after testing
@@ -307,8 +307,8 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 
 	// TODO: change this hack
 	for i := range clothes {
-		clothes[i].ImgPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].ImgPath, "")
-		clothes[i].MaskPath = strings.ReplaceAll(consts.HomeDirectory, clothes[i].MaskPath, "")
+		clothes[i].ImgPath = strings.ReplaceAll(clothes[i].ImgPath, consts.HomeDirectory, "")
+		clothes[i].MaskPath = strings.ReplaceAll(clothes[i].MaskPath, consts.HomeDirectory, "")
 	}
 
 	// for i, v := range clothes {

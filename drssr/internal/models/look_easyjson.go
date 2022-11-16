@@ -52,7 +52,7 @@ func easyjson9db9635DecodeDrssrInternalModels(in *jlexer.Lexer, out *Look) {
 				in.Delim('[')
 				if out.Clothes == nil {
 					if !in.IsDelim(']') {
-						out.Clothes = make([]ClothesStruct, 0, 1)
+						out.Clothes = make([]ClothesStruct, 0, 0)
 					} else {
 						out.Clothes = []ClothesStruct{}
 					}
@@ -67,6 +67,8 @@ func easyjson9db9635DecodeDrssrInternalModels(in *jlexer.Lexer, out *Look) {
 				}
 				in.Delim(']')
 			}
+		case "img_path":
+			out.ImgPath = string(in.String())
 		case "img":
 			out.Img = string(in.String())
 		default:
@@ -118,6 +120,11 @@ func easyjson9db9635EncodeDrssrInternalModels(out *jwriter.Writer, in Look) {
 			}
 			out.RawByte(']')
 		}
+	}
+	{
+		const prefix string = ",\"img_path\":"
+		out.RawString(prefix)
+		out.String(string(in.ImgPath))
 	}
 	{
 		const prefix string = ",\"img\":"
@@ -248,6 +255,10 @@ func easyjson9db9635DecodeDrssrInternalModels2(in *jlexer.Lexer, out *ClothesStr
 			out.Label = string(in.String())
 		case "coords":
 			(out.Coords).UnmarshalEasyJSON(in)
+		case "img_path":
+			out.ImgPath = string(in.String())
+		case "mask_path":
+			out.MaskPath = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -276,6 +287,16 @@ func easyjson9db9635EncodeDrssrInternalModels2(out *jwriter.Writer, in ClothesSt
 		const prefix string = ",\"coords\":"
 		out.RawString(prefix)
 		(in.Coords).MarshalEasyJSON(out)
+	}
+	{
+		const prefix string = ",\"img_path\":"
+		out.RawString(prefix)
+		out.String(string(in.ImgPath))
+	}
+	{
+		const prefix string = ",\"mask_path\":"
+		out.RawString(prefix)
+		out.String(string(in.MaskPath))
 	}
 	out.RawByte('}')
 }

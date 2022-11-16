@@ -76,25 +76,25 @@ func (pu *postsUsecase) generateClothesElement(
 			fmt.Errorf("can't create post with not owner clothes")
 	}
 
-	// decoding img
-	decodedImg, err := common.ReadFileIntoBase64(postClothes.ImgPath)
-	if err != nil {
-		return models.Clothes{},
-			http.StatusInternalServerError,
-			fmt.Errorf("failed to read clothes img into base64: %w", err)
-	}
+	// // decoding img
+	// decodedImg, err := common.ReadFileIntoBase64(postClothes.ImgPath)
+	// if err != nil {
+	// 	return models.Clothes{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("failed to read clothes img into base64: %w", err)
+	// }
 
-	postClothes.Img = decodedImg
+	// postClothes.Img = decodedImg
 
-	// decoding mask
-	decodedMask, err := common.ReadFileIntoBase64(postClothes.MaskPath)
-	if err != nil {
-		return models.Clothes{},
-			http.StatusInternalServerError,
-			fmt.Errorf("failed to read clothes mask into base64: %w", err)
-	}
+	// // decoding mask
+	// decodedMask, err := common.ReadFileIntoBase64(postClothes.MaskPath)
+	// if err != nil {
+	// 	return models.Clothes{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("failed to read clothes mask into base64: %w", err)
+	// }
 
-	postClothes.Mask = decodedMask
+	// postClothes.Mask = decodedMask
 
 	return postClothes, http.StatusOK, nil
 }
@@ -134,15 +134,15 @@ func (pu *postsUsecase) generateLookElement(
 
 	postLook.Clothes = clothes
 
-	// decoding look's img
-	decodedLookImg, err := common.ReadFileIntoBase64(postLook.ImgPath)
-	if err != nil {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("failed to read look's img file into base64: %w", err)
-	}
+	// // decoding look's img
+	// decodedLookImg, err := common.ReadFileIntoBase64(postLook.ImgPath)
+	// if err != nil {
+	// 	return models.Look{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("failed to read look's img file into base64: %w", err)
+	// }
 
-	postLook.Img = decodedLookImg
+	// postLook.Img = decodedLookImg
 
 	return postLook, http.StatusOK, nil
 }
@@ -267,7 +267,7 @@ func (pu *postsUsecase) AddPost(
 		}
 	})
 
-	createdPost.Previews = post.Previews
+	// createdPost.Previews = post.Previews
 	createdPost.Clothes = post.Clothes
 	createdPost.Look = post.Look
 
@@ -353,19 +353,19 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
 
-		posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
+		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
 
-		for _, previewPath := range posts[i].PreviewsPaths {
-			decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
-			}
+		// for _, previewPath := range posts[i].PreviewsPaths {
+		// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
+		// 	if err != nil {
+		// 		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
+		// 	}
 
-			lastSlashIndex := strings.LastIndex(previewPath, "/")
-			fileName := previewPath[lastSlashIndex+1:]
+		// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
+		// 	fileName := previewPath[lastSlashIndex+1:]
 
-			posts[i].Previews[fileName] = decodedPreview
-		}
+		// 	posts[i].Previews[fileName] = decodedPreview
+		// }
 	}
 
 	return posts, http.StatusOK, nil
@@ -391,19 +391,19 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 		return models.Post{}, status, fmt.Errorf("PostsUsecase.GetPostByID: failed to generate post's element: %w", err)
 	}
 
-	foundingPost.Previews = make(map[string]string, len(foundingPost.PreviewsPaths))
+	// foundingPost.Previews = make(map[string]string, len(foundingPost.PreviewsPaths))
 
-	for _, previewPath := range foundingPost.PreviewsPaths {
-		decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-		if err != nil {
-			return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to read preview file into base64: %w", err)
-		}
+	// for _, previewPath := range foundingPost.PreviewsPaths {
+	// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
+	// 	if err != nil {
+	// 		return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to read preview file into base64: %w", err)
+	// 	}
 
-		lastSlashIndex := strings.LastIndex(previewPath, "/")
-		fileName := previewPath[lastSlashIndex+1:]
+	// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
+	// 	fileName := previewPath[lastSlashIndex+1:]
 
-		foundingPost.Previews[fileName] = decodedPreview
-	}
+	// 	foundingPost.Previews[fileName] = decodedPreview
+	// }
 
 	return foundingPost, http.StatusOK, nil
 }
@@ -424,19 +424,19 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
 
-		posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
+		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
 
-		for _, previewPath := range posts[i].PreviewsPaths {
-			decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-			if err != nil {
-				return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
-			}
+		// for _, previewPath := range posts[i].PreviewsPaths {
+		// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
+		// 	if err != nil {
+		// 		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
+		// 	}
 
-			lastSlashIndex := strings.LastIndex(previewPath, "/")
-			fileName := previewPath[lastSlashIndex+1:]
+		// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
+		// 	fileName := previewPath[lastSlashIndex+1:]
 
-			posts[i].Previews[fileName] = decodedPreview
-		}
+		// 	posts[i].Previews[fileName] = decodedPreview
+		// }
 	}
 
 	return posts, http.StatusOK, nil

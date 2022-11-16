@@ -13,9 +13,9 @@ type Clothes struct {
 	ID       uint64       `json:"id" db:"id"`
 	Type     string       `json:"type" db:"type"`
 	Color    string       `json:"color,omitempty" db:"color"`
-	ImgPath  string       `json:"-" db:"img"`
+	ImgPath  string       `json:"img_path" db:"img"`
 	Img      string       `json:"img" db:"-"`
-	MaskPath string       `json:"-" db:"mask"`
+	MaskPath string       `json:"mask_path" db:"mask"`
 	Mask     string       `json:"mask" db:"-"`
 	Brand    string       `json:"brand,omitempty" db:"brand"`
 	Sex      string       `json:"sex,omitempty" db:"sex"`

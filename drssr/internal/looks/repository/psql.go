@@ -211,7 +211,7 @@ func (pr *postgresqlRepository) GetLookClothes(
 ) ([]models.ClothesStruct, error) {
 	rows, err := pr.conn.Query(
 		`SELECT
-			c.id, c.type, c.brand, cl.x, cl.y
+			c.id, c.type, c.brand, c.img, c.mask, cl.x, cl.y
 		FROM clothes_looks cl
 		JOIN clothes c ON c.id = cl.clothes_id
 		WHERE look_id = $1;`,
@@ -231,6 +231,8 @@ func (pr *postgresqlRepository) GetLookClothes(
 			&row.ID,
 			&clothesType,
 			&clothesBrand,
+			&row.ImgPath,
+			&row.MaskPath,
 			&row.Coords.X,
 			&row.Coords.Y,
 		)

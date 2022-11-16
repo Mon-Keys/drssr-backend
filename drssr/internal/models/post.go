@@ -19,7 +19,7 @@ type Post struct {
 	Clothes       Clothes           `json:"clothes,omitempty" db:"-"`
 	Look          Look              `json:"look,omitempty" db:"-"`
 	Previews      map[string]string `json:"previews" db:"-"`
-	PreviewsPaths []string          `json:"-" db:"previews_paths"`
+	PreviewsPaths []string          `json:"previews_paths" db:"previews_paths"`
 	Ctime         time.Time         `json:"-" db:"created_at"`
 }
 

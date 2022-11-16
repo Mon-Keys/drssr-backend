@@ -42,8 +42,12 @@ func easyjson31a459deDecodeDrssrInternalModels(in *jlexer.Lexer, out *Clothes) {
 			out.Type = string(in.String())
 		case "color":
 			out.Color = string(in.String())
+		case "img_path":
+			out.ImgPath = string(in.String())
 		case "img":
 			out.Img = string(in.String())
+		case "mask_path":
+			out.MaskPath = string(in.String())
 		case "mask":
 			out.Mask = string(in.String())
 		case "brand":
@@ -88,9 +92,19 @@ func easyjson31a459deEncodeDrssrInternalModels(out *jwriter.Writer, in Clothes) 
 		out.String(string(in.Color))
 	}
 	{
+		const prefix string = ",\"img_path\":"
+		out.RawString(prefix)
+		out.String(string(in.ImgPath))
+	}
+	{
 		const prefix string = ",\"img\":"
 		out.RawString(prefix)
 		out.String(string(in.Img))
+	}
+	{
+		const prefix string = ",\"mask_path\":"
+		out.RawString(prefix)
+		out.String(string(in.MaskPath))
 	}
 	{
 		const prefix string = ",\"mask\":"

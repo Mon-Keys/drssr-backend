@@ -10,9 +10,7 @@ import (
 	"drssr/internal/pkg/cutter"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/pkg/similarity"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 
@@ -115,8 +113,8 @@ func (cu *clothesUsecase) AddFile(
 		}
 	})
 
-	createdClothes.Img = res.Img
-	createdClothes.Mask = res.Mask
+	// createdClothes.Img = res.Img
+	// createdClothes.Mask = res.Mask
 
 	return createdClothes, http.StatusOK, nil
 }
@@ -147,22 +145,22 @@ func (cu *clothesUsecase) UpdateClothes(
 			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to update clothes in db: %w", err)
 	}
 
-	img, err := ioutil.ReadFile(updatedClothes.ImgPath)
-	if err != nil {
-		return models.Clothes{},
-			http.StatusInternalServerError,
-			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read img file: %w", err)
-	}
+	// img, err := ioutil.ReadFile(updatedClothes.ImgPath)
+	// if err != nil {
+	// 	return models.Clothes{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read img file: %w", err)
+	// }
 
-	mask, err := ioutil.ReadFile(updatedClothes.MaskPath)
-	if err != nil {
-		return models.Clothes{},
-			http.StatusInternalServerError,
-			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read mask file: %w", err)
-	}
+	// mask, err := ioutil.ReadFile(updatedClothes.MaskPath)
+	// if err != nil {
+	// 	return models.Clothes{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read mask file: %w", err)
+	// }
 
-	updatedClothes.Img = base64.StdEncoding.EncodeToString(img)
-	updatedClothes.Mask = base64.StdEncoding.EncodeToString(mask)
+	// updatedClothes.Img = base64.StdEncoding.EncodeToString(img)
+	// updatedClothes.Mask = base64.StdEncoding.EncodeToString(mask)
 
 	// processing similarity
 	go cu.processingSimilarity(ctx, updatedClothes)
@@ -257,26 +255,25 @@ func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) 
 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to get clothes from db: %w", err)
 	}
 
-	for i, v := range clothes {
-		img, err := ioutil.ReadFile(v.ImgPath)
-		if err != nil {
-			return nil,
-				http.StatusInternalServerError,
-				fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open img %s file: %w", v.ImgPath, err)
-		}
+	// for i, v := range clothes {
+	// 	img, err := ioutil.ReadFile(v.ImgPath)
+	// 	if err != nil {
+	// 		return nil,
+	// 			http.StatusInternalServerError,
+	// 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open img %s file: %w", v.ImgPath, err)
+	// 	}
 
-		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
+	// 	clothes[i].Img = base64.StdEncoding.EncodeToString(img)
 
-		mask, err := ioutil.ReadFile(v.MaskPath)
-		if err != nil {
-			return nil,
-				http.StatusInternalServerError,
-				fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open mask %s file: %w", v.MaskPath, err)
-		}
+	// 	mask, err := ioutil.ReadFile(v.MaskPath)
+	// 	if err != nil {
+	// 		return nil,
+	// 			http.StatusInternalServerError,
+	// 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open mask %s file: %w", v.MaskPath, err)
+	// 	}
 
-		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-
-	}
+	// 	clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
+	// }
 
 	return clothes, http.StatusOK, nil
 }
@@ -289,26 +286,25 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to get clothes from db: %w", err)
 	}
 
-	for i, v := range clothes {
-		img, err := ioutil.ReadFile(v.ImgPath)
-		if err != nil {
-			return nil,
-				http.StatusInternalServerError,
-				fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open img %s file: %w", v.ImgPath, err)
-		}
+	// for i, v := range clothes {
+	// 	img, err := ioutil.ReadFile(v.ImgPath)
+	// 	if err != nil {
+	// 		return nil,
+	// 			http.StatusInternalServerError,
+	// 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open img %s file: %w", v.ImgPath, err)
+	// 	}
 
-		clothes[i].Img = base64.StdEncoding.EncodeToString(img)
+	// 	clothes[i].Img = base64.StdEncoding.EncodeToString(img)
 
-		mask, err := ioutil.ReadFile(v.MaskPath)
-		if err != nil {
-			return nil,
-				http.StatusInternalServerError,
-				fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open mask %s file: %w", v.MaskPath, err)
-		}
+	// 	mask, err := ioutil.ReadFile(v.MaskPath)
+	// 	if err != nil {
+	// 		return nil,
+	// 			http.StatusInternalServerError,
+	// 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open mask %s file: %w", v.MaskPath, err)
+	// 	}
 
-		clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-
-	}
+	// 	clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
+	// }
 
 	return clothes, http.StatusOK, nil
 }

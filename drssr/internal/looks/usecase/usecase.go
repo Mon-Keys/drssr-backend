@@ -136,13 +136,15 @@ func (lu *looksUsecase) AddLook(
 		}
 
 		createdLook.Clothes = append(createdLook.Clothes, models.ClothesStruct{
-			ID:     clothes.ID,
-			Label:  fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
-			Coords: createdBind.Coords,
+			ID:       clothes.ID,
+			Label:    fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
+			Coords:   createdBind.Coords,
+			ImgPath:  clothedFromDB.ImgPath,
+			MaskPath: clothedFromDB.MaskPath,
 		})
 	}
 
-	createdLook.Img = look.Img
+	// createdLook.Img = look.Img
 
 	return createdLook, http.StatusOK, nil
 }
@@ -279,9 +281,11 @@ func (lu *looksUsecase) UpdateLook(
 		}
 
 		updatedLook.Clothes = append(updatedLook.Clothes, models.ClothesStruct{
-			ID:     clothes.ID,
-			Label:  fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
-			Coords: createdBind.Coords,
+			ID:       clothes.ID,
+			Label:    fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
+			Coords:   createdBind.Coords,
+			ImgPath:  clothedFromDB.ImgPath,
+			MaskPath: clothedFromDB.MaskPath,
 		})
 	}
 
@@ -295,7 +299,7 @@ func (lu *looksUsecase) UpdateLook(
 			fmt.Errorf("LooksUsecase.UpdateLook: failed to delete old look's img file: %w", err)
 	}
 
-	updatedLook.Img = newLook.Img
+	// updatedLook.Img = newLook.Img
 
 	return updatedLook, http.StatusOK, nil
 }
@@ -368,12 +372,12 @@ func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int,
 
 		looks[i].Clothes = clothes
 
-		decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file into base64: %w", err)
-		}
+		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
+		// if err != nil {
+		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file into base64: %w", err)
+		// }
 
-		looks[i].Img = decodedLookImg
+		// looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil
@@ -402,14 +406,14 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Loo
 
 	foundingLook.Clothes = clothes
 
-	decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
-	if err != nil {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.GetLookByID: failed to read img file into base64: %w", err)
-	}
+	// decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
+	// if err != nil {
+	// 	return models.Look{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("LooksUsecase.GetLookByID: failed to read img file into base64: %w", err)
+	// }
 
-	foundingLook.Img = decodedLookImg
+	// foundingLook.Img = decodedLookImg
 
 	return foundingLook, http.StatusOK, nil
 }
@@ -431,12 +435,12 @@ func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) 
 
 		looks[i].Clothes = clothes
 
-		decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
-		if err != nil {
-			return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file into base64: %w", err)
-		}
+		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
+		// if err != nil {
+		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file into base64: %w", err)
+		// }
 
-		looks[i].Img = decodedLookImg
+		// looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil

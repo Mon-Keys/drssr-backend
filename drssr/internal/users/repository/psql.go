@@ -18,6 +18,8 @@ type IPostgresqlRepository interface {
 	AddUser(ctx context.Context, user models.SignupCredentials) (models.User, error)
 	UpdateUser(ctx context.Context, user models.UpdateUserReq) (models.User, error)
 	DeleteUser(ctx context.Context, uid uint64) error
+
+	CheckStatus(ctx context.Context) (int, error)
 }
 
 type postgresqlRepository struct {
@@ -51,6 +53,20 @@ func NewPostgresqlRepository(cfg config.PostgresConfig, logger logrus.Logger) IP
 	}
 
 	return &postgresqlRepository{conn: pool, logger: logger}
+}
+
+func (pr *postgresqlRepository) CheckStatus(ctx context.Context) (int, error) {
+	var counter int
+	err := pr.conn.QueryRow(
+		`SELECT COUNT(*) FROM users;`,
+	).Scan(
+		&counter,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return counter, nil
 }
 
 func (pr *postgresqlRepository) GetUserByEmailOrNickname(

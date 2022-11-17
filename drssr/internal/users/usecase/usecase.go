@@ -24,6 +24,8 @@ type IUserUsecase interface {
 	LogoutUser(ctx context.Context, email string) (int, error)
 	UpdateUser(ctx context.Context, newUserData models.UpdateUserReq) (models.User, int, error)
 	DeleteUser(ctx context.Context, user models.User, cookieValue string) (int, error)
+
+	CheckStatus(ctx context.Context) (int, error)
 }
 
 type userUsecase struct {
@@ -42,6 +44,10 @@ func NewUserUsecase(
 		rds:    rr,
 		logger: logger,
 	}
+}
+
+func (uu *userUsecase) CheckStatus(ctx context.Context) (int, error) {
+	return uu.psql.CheckStatus(ctx)
 }
 
 func (uu *userUsecase) GetUserByCookie(ctx context.Context, cookie string) (models.User, int, error) {

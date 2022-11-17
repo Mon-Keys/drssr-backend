@@ -47,6 +47,17 @@ func SetUserRouting(
 	userPrivateAPI.HandleFunc("", userDelivery.updateUser).Methods(http.MethodPut)
 	userPrivateAPI.HandleFunc("", userDelivery.deleteUser).Methods(http.MethodDelete)
 	userPrivateAPI.HandleFunc("/logout", userDelivery.logout).Methods(http.MethodDelete)
+
+	// TODO: move
+	router.HandleFunc("/health", userDelivery.statusHandler)
+}
+
+func (ud *UserDelivery) statusHandler(w http.ResponseWriter, r *http.Request) {
+	counter, _ := ud.userUseCase.CheckStatus(r.Context())
+
+	ioutils.Send(w, http.StatusOK, models.StatusCheckStruct{
+		UserTotal: counter,
+	})
 }
 
 // public

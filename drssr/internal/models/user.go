@@ -42,3 +42,8 @@ type LoginCredentials struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
+
+//easyjson:json
+type StatusCheckStruct struct {
+	UserTotal int `json:"user_total"`
+}

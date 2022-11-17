@@ -60,7 +60,7 @@ func (ud *UserDelivery) statusHandler(w http.ResponseWriter, r *http.Request) {
 	// 	UserTotal: counter,
 	// })
 	w.WriteHeader(http.StatusOK)
-	response := fmt.Sprintf("users_amount %d")
+	response := fmt.Sprintf("users_amount %d", counter)
 	w.Write([]byte(response))
 }
 

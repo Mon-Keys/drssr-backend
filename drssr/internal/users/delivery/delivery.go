@@ -7,6 +7,7 @@ import (
 	"drssr/internal/pkg/ioutils"
 	middleware "drssr/internal/pkg/middlewares"
 	"drssr/internal/users/usecase"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -55,9 +56,12 @@ func SetUserRouting(
 func (ud *UserDelivery) statusHandler(w http.ResponseWriter, r *http.Request) {
 	counter, _ := ud.userUseCase.CheckStatus(r.Context())
 
-	ioutils.Send(w, http.StatusOK, models.StatusCheckStruct{
-		UserTotal: counter,
-	})
+	// ioutils.Send(w, http.StatusOK, models.StatusCheckStruct{
+	// 	UserTotal: counter,
+	// })
+	w.WriteHeader(http.StatusOK)
+	response := fmt.Sprintf("users_amount %d")
+	w.Write([]byte(response))
 }
 
 // public

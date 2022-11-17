@@ -14,14 +14,14 @@ postgres:
   name: "drssr"
 
 cutter:
-  url: 'http://127.0.0.1:5001'
+  url: 'http://host.docker.internal:5001'
   timeout: 10s
 
 classifier:
-  url: 'localhost:5002'
+  url: 'host.docker.internal:5002'
 
 similarity:
-  url: 'http://127.0.0.1:5001'
+  url: 'http://host.docker.internal:5001'
   timeout: 10s
 
 well_similarity_percent: 50

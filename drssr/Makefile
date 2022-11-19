@@ -1,6 +1,9 @@
 run:
 	go run cmd/main.go
 
+background_run:
+	nohup go run cmd/main.go > logs.log &
+
 .PHONY: docker
 docker:
 	docker stop drssr_api || true

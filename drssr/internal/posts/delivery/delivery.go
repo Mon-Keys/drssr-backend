@@ -79,7 +79,7 @@ func (pd *PostsDelivery) addPost(w http.ResponseWriter, r *http.Request) {
 
 	post.CreatorID = user.ID
 
-	createdPost, status, err := pd.postsUseCase.AddPost(ctx, post)
+	createdPost, status, err := pd.postsUseCase.AddPost(ctx, user.Email, post)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to save post: %w", err)
 		ioutils.SendDefaultError(w, status)

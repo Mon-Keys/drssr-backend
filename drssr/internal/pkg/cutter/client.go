@@ -46,9 +46,11 @@ type UploadImgArgs struct {
 }
 
 type UploadImgRes struct {
-	Img      string `json:"img"`
-	ImgPath  string `json:"img_path"`
-	Mask     string `json:"mask"`
+	Img string `json:"img"`
+	// TODO: delete
+	// ImgPath  string `json:"img_path"`
+	Mask string `json:"mask"`
+	// TODO: delete
 	MaskPath string `json:"mask_path"`
 }
 

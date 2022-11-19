@@ -6,24 +6,22 @@ import (
 	clothes_repository "drssr/internal/clothes/repository"
 	"drssr/internal/looks/repository"
 	"drssr/internal/models"
-	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/rollback"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
 type ILooksUsecase interface {
-	AddLook(ctx context.Context, look models.Look) (models.Look, int, error)
-	UpdateLook(ctx context.Context, newLook models.Look, lid uint64, uid uint64) (models.Look, int, error)
+	AddLook(ctx context.Context, userEmail string, look models.Look) (models.Look, int, error)
+	UpdateLook(ctx context.Context, userEmail string, newLook models.Look, lid uint64, uid uint64) (models.Look, int, error)
 	DeleteLook(ctx context.Context, uid uint64, lid uint64) (int, error)
 
 	GetLookByID(ctx context.Context, lid uint64) (models.Look, int, error)
@@ -51,41 +49,34 @@ func NewLooksUsecase(
 
 func (lu *looksUsecase) AddLook(
 	ctx context.Context,
+	userEmail string,
 	look models.Look,
 ) (models.Look, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
 	// checking file ext
 	splitedFilename := strings.Split(look.Filename, ".")
 	ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-	if !common.IsEnabledExt(ext) {
+	if !file_utils.IsEnabledExt(ext) {
 		return models.Look{},
 			http.StatusInternalServerError,
 			fmt.Errorf("LooksUsecase.AddLook: not enabled file extension")
 	}
 
-	// decoding base64 img into []byte
-	decodedImg, err := base64.StdEncoding.DecodeString(look.Img)
-	if err != nil {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.AddLook: failed to decode base64 into byte slice: %w", err)
-	}
-
-	today := time.Now().Format("2006-01-02")
-	folderNameByte := sha1.New().Sum([]byte(today))
-	folderName := hex.EncodeToString(folderNameByte)
+	folderNameByte := sha1.New().Sum([]byte(userEmail))
+	folderName := fmt.Sprintf(hex.EncodeToString(folderNameByte))
 
 	folderPath := fmt.Sprintf("%s/%s", consts.LooksBaseFolderPath, folderName)
 	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, look.Filename)
 	look.ImgPath = filePath
 
-	err = common.SaveFile(folderPath, filePath, decodedImg)
+	err := file_utils.SaveBase64ToFile(folderPath, filePath, look.Img)
 	if err != nil {
 		return models.Look{},
 			http.StatusInternalServerError,
 			fmt.Errorf("LooksUsecase.AddLook: failed to save look's file: %w", err)
 	}
 
-	ctx, rb := rollback.NewCtxRollback(ctx)
 	rb.Add(func() {
 		err := os.Remove(filePath)
 		if err != nil {
@@ -151,10 +142,13 @@ func (lu *looksUsecase) AddLook(
 
 func (lu *looksUsecase) UpdateLook(
 	ctx context.Context,
+	userEmail string,
 	newLook models.Look,
 	lid uint64,
 	uid uint64,
 ) (models.Look, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
 	// checking look in db
 	foundingLook, err := lu.psql.GetLookByID(ctx, lid)
 	if err != nil {
@@ -177,36 +171,26 @@ func (lu *looksUsecase) UpdateLook(
 	// checking file ext
 	splitedFilename := strings.Split(newLook.Filename, ".")
 	ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-	if !common.IsEnabledExt(ext) {
+	if !file_utils.IsEnabledExt(ext) {
 		return models.Look{},
 			http.StatusInternalServerError,
 			fmt.Errorf("LooksUsecase.UpdateLook: not enabled file extension")
 	}
 
-	// decoding base64 img into []byte
-	decodedImg, err := base64.StdEncoding.DecodeString(newLook.Img)
-	if err != nil {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.UpdateLook: failed to decode base64 into byte slice: %w", err)
-	}
-
-	today := time.Now().Format("2006-01-02")
-	folderNameByte := sha1.New().Sum([]byte(today))
+	folderNameByte := sha1.New().Sum([]byte(userEmail))
 	folderName := hex.EncodeToString(folderNameByte)
 
 	folderPath := fmt.Sprintf("%s/%s", consts.LooksBaseFolderPath, folderName)
 	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, newLook.Filename)
 	newLook.ImgPath = filePath
 
-	err = common.SaveFile(folderPath, filePath, decodedImg)
+	err = file_utils.SaveBase64ToFile(folderPath, filePath, newLook.Img)
 	if err != nil {
 		return models.Look{},
 			http.StatusInternalServerError,
 			fmt.Errorf("LooksUsecase.UpdateLook: failed to save look's file: %w", err)
 	}
 
-	ctx, rb := rollback.NewCtxRollback(ctx)
 	rb.Add(func() {
 		err := os.Remove(filePath)
 		if err != nil {
@@ -290,7 +274,7 @@ func (lu *looksUsecase) UpdateLook(
 	}
 
 	// deleting old img
-	err = common.DeleteFile(foundingLook.ImgPath)
+	err = file_utils.DeleteFile(foundingLook.ImgPath)
 	if err != nil {
 		rb.Run()
 
@@ -298,12 +282,6 @@ func (lu *looksUsecase) UpdateLook(
 			http.StatusInternalServerError,
 			fmt.Errorf("LooksUsecase.UpdateLook: failed to delete old look's img file: %w", err)
 	}
-
-	// TODO: change this hack
-	updatedLook.ImgPath = strings.ReplaceAll(updatedLook.ImgPath, consts.HomeDirectory, "")
-
-	// TODO: delete after testing
-	// updatedLook.Img = newLook.Img
 
 	return updatedLook, http.StatusOK, nil
 }
@@ -376,16 +354,6 @@ func (lu *looksUsecase) GetUserLooks(ctx context.Context, uid uint64, limit int,
 
 		looks[i].Clothes = clothes
 
-		// TODO: change this hack
-		looks[i].ImgPath = strings.ReplaceAll(looks[i].ImgPath, consts.HomeDirectory, "")
-
-		// TODO: delete after testing
-		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
-		// if err != nil {
-		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetUserLooks: failed to read img file into base64: %w", err)
-		// }
-
-		// looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil
@@ -414,19 +382,6 @@ func (lu *looksUsecase) GetLookByID(ctx context.Context, lid uint64) (models.Loo
 
 	foundingLook.Clothes = clothes
 
-	// TODO: change this hack
-	foundingLook.ImgPath = strings.ReplaceAll(foundingLook.ImgPath, consts.HomeDirectory, "")
-
-	// TODO: delete after testing
-	// decodedLookImg, err := common.ReadFileIntoBase64(foundingLook.ImgPath)
-	// if err != nil {
-	// 	return models.Look{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("LooksUsecase.GetLookByID: failed to read img file into base64: %w", err)
-	// }
-
-	// foundingLook.Img = decodedLookImg
-
 	return foundingLook, http.StatusOK, nil
 }
 
@@ -446,17 +401,6 @@ func (lu *looksUsecase) GetAllLooks(ctx context.Context, limit int, offset int) 
 		}
 
 		looks[i].Clothes = clothes
-
-		// TODO: change this hack
-		looks[i].ImgPath = strings.ReplaceAll(looks[i].ImgPath, consts.HomeDirectory, "")
-
-		// TODO: delete after testing
-		// decodedLookImg, err := common.ReadFileIntoBase64(looks[i].ImgPath)
-		// if err != nil {
-		// 	return nil, http.StatusInternalServerError, fmt.Errorf("LooksUsecase.GetAllLooks: failed to read img file into base64: %w", err)
-		// }
-
-		// looks[i].Img = decodedLookImg
 	}
 
 	return looks, http.StatusOK, nil

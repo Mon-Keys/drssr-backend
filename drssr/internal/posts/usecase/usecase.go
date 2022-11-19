@@ -6,24 +6,22 @@ import (
 	clothes_repository "drssr/internal/clothes/repository"
 	looks_repository "drssr/internal/looks/repository"
 	"drssr/internal/models"
-	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/posts/repository"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
 type IPostUsecase interface {
-	AddPost(ctx context.Context, look models.Post) (models.Post, int, error)
+	AddPost(ctx context.Context, userEmail string, look models.Post) (models.Post, int, error)
 	DeletePost(ctx context.Context, uid uint64, pid uint64) (int, error)
 
 	GetPostByID(ctx context.Context, pid uint64) (models.Post, int, error)
@@ -76,31 +74,6 @@ func (pu *postsUsecase) generateClothesElement(
 			fmt.Errorf("can't create post with not owner clothes")
 	}
 
-	// TODO: change this hack
-	postClothes.ImgPath = strings.ReplaceAll(postClothes.ImgPath, consts.HomeDirectory, "")
-	postClothes.MaskPath = strings.ReplaceAll(postClothes.MaskPath, consts.HomeDirectory, "")
-
-	// TODO: delete after testing
-	// // decoding img
-	// decodedImg, err := common.ReadFileIntoBase64(postClothes.ImgPath)
-	// if err != nil {
-	// 	return models.Clothes{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("failed to read clothes img into base64: %w", err)
-	// }
-
-	// postClothes.Img = decodedImg
-
-	// // decoding mask
-	// decodedMask, err := common.ReadFileIntoBase64(postClothes.MaskPath)
-	// if err != nil {
-	// 	return models.Clothes{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("failed to read clothes mask into base64: %w", err)
-	// }
-
-	// postClothes.Mask = decodedMask
-
 	return postClothes, http.StatusOK, nil
 }
 
@@ -139,23 +112,6 @@ func (pu *postsUsecase) generateLookElement(
 
 	postLook.Clothes = clothes
 
-	// TODO: change this hack
-	postLook.ImgPath = strings.ReplaceAll(postLook.ImgPath, consts.HomeDirectory, "")
-	for i := range postLook.Clothes {
-		postLook.Clothes[i].ImgPath = strings.ReplaceAll(postLook.Clothes[i].ImgPath, consts.HomeDirectory, "")
-	}
-
-	// TODO: delete after testing
-	// // decoding look's img
-	// decodedLookImg, err := common.ReadFileIntoBase64(postLook.ImgPath)
-	// if err != nil {
-	// 	return models.Look{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("failed to read look's img file into base64: %w", err)
-	// }
-
-	// postLook.Img = decodedLookImg
-
 	return postLook, http.StatusOK, nil
 }
 
@@ -177,7 +133,7 @@ func (pu *postsUsecase) generateElement(
 		if err != nil || status != http.StatusOK {
 			return models.Post{},
 				status,
-				fmt.Errorf("PostsUsecase.AddPost: failed to generate post's clothes element: %w", err)
+				fmt.Errorf("failed to generate post's clothes element: %w", err)
 		}
 
 	// post with look
@@ -187,13 +143,13 @@ func (pu *postsUsecase) generateElement(
 		if err != nil || status != http.StatusOK {
 			return models.Post{},
 				status,
-				fmt.Errorf("PostsUsecase.AddPost: failed to generate post's look element: %w", err)
+				fmt.Errorf("failed to generate post's look element: %w", err)
 		}
 
 	default:
 		return models.Post{},
 			http.StatusBadRequest,
-			fmt.Errorf("PostsUsecase.AddPost: unknown post type %s", post.Type)
+			fmt.Errorf("unknown post type %s", post.Type)
 	}
 
 	post.Clothes = postClothes
@@ -204,6 +160,7 @@ func (pu *postsUsecase) generateElement(
 
 func (pu *postsUsecase) AddPost(
 	ctx context.Context,
+	userEmail string,
 	post models.Post,
 ) (models.Post, int, error) {
 	ctx, rb := rollback.NewCtxRollback(ctx)
@@ -216,8 +173,7 @@ func (pu *postsUsecase) AddPost(
 			fmt.Errorf("PostsUsecase.AddPost: failed to generate post's element: %w", err)
 	}
 
-	today := time.Now().Format("2006-01-02")
-	folderNameByte := sha1.New().Sum([]byte(today))
+	folderNameByte := sha1.New().Sum([]byte(userEmail))
 	folderName := hex.EncodeToString(folderNameByte)
 	folderPath := fmt.Sprintf("%s/%s", consts.PostsBaseFolderPath, folderName)
 
@@ -225,7 +181,7 @@ func (pu *postsUsecase) AddPost(
 		// checking file ext
 		splitedFilename := strings.Split(fileName, ".")
 		ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-		if !common.IsEnabledExt(ext) {
+		if !file_utils.IsEnabledExt(ext) {
 			rb.Run()
 
 			return models.Post{},
@@ -233,18 +189,9 @@ func (pu *postsUsecase) AddPost(
 				fmt.Errorf("PostsUsecase.AddPost: not enabled file extension")
 		}
 
-		decodedPreview, err := base64.StdEncoding.DecodeString(preview)
-		if err != nil {
-			rb.Run()
-
-			return models.Post{},
-				http.StatusInternalServerError,
-				fmt.Errorf("PostsUsecase.AddPost: failed to decode base64 into byte slice: %w", err)
-		}
-
 		filePath := fmt.Sprintf("%s/%s/%s", consts.PostsBaseFolderPath, folderName, fileName)
 
-		err = common.SaveFile(folderPath, filePath, decodedPreview)
+		err = file_utils.SaveBase64ToFile(folderPath, filePath, preview)
 		if err != nil {
 			rb.Run()
 
@@ -279,13 +226,6 @@ func (pu *postsUsecase) AddPost(
 		}
 	})
 
-	// TODO: change this hack
-	for i := range createdPost.PreviewsPaths {
-		createdPost.PreviewsPaths[i] = strings.ReplaceAll(createdPost.PreviewsPaths[i], consts.HomeDirectory, "")
-	}
-
-	// TODO: delete after testing
-	// createdPost.Previews = post.Previews
 	createdPost.Clothes = post.Clothes
 	createdPost.Look = post.Look
 
@@ -324,7 +264,13 @@ func (pu *postsUsecase) DeletePost(ctx context.Context, uid uint64, pid uint64) 
 	})
 
 	for _, preview := range deletedLook.PreviewsPaths {
-		err = common.DeleteFile(preview)
+		// for rollback
+		encodedPreview, err := file_utils.ReadFileIntoBase64(preview)
+		if err != nil {
+			pu.logger.Errorf("PostsUsecase.DeleteLook: failed to rollback deleting of post's preview from disk: %w", err)
+		}
+
+		err = file_utils.DeleteFile(preview)
 		if err != nil {
 			rb.Run()
 
@@ -332,20 +278,10 @@ func (pu *postsUsecase) DeletePost(ctx context.Context, uid uint64, pid uint64) 
 		}
 
 		rb.Add(func() {
-			encodedPreview, err := common.ReadFileIntoBase64(preview)
-			if err != nil {
-				pu.logger.Errorf("PostsUsecase.DeleteLook: failed to rollback deleting of post's preview from disk: %w", err)
-			}
-
-			decodedPreview, err := base64.StdEncoding.DecodeString(encodedPreview)
-			if err != nil {
-				pu.logger.Errorf("PostsUsecase.DeleteLook: failed to rollback deleting of post's preview from disk: %w", err)
-			}
-
 			lastSlashIndex := strings.LastIndex(preview, "/")
 			dirPath := preview[:lastSlashIndex-1]
 
-			err = common.SaveFile(dirPath, preview, decodedPreview)
+			err = file_utils.SaveBase64ToFile(dirPath, preview, encodedPreview)
 			if err != nil {
 				pu.logger.Errorf("PostsUsecase.DeleteLook: failed to rollback deleting of post's preview from disk: %w", err)
 			}
@@ -370,26 +306,6 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 		if err != nil || status != http.StatusOK {
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
-
-		// TODO: change this hack
-		for j := range posts[i].PreviewsPaths {
-			posts[i].PreviewsPaths[j] = strings.ReplaceAll(posts[i].PreviewsPaths[j], consts.HomeDirectory, "")
-		}
-
-		// TODO: delete after testing
-		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
-
-		// for _, previewPath := range posts[i].PreviewsPaths {
-		// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-		// 	if err != nil {
-		// 		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
-		// 	}
-
-		// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
-		// 	fileName := previewPath[lastSlashIndex+1:]
-
-		// 	posts[i].Previews[fileName] = decodedPreview
-		// }
 	}
 
 	return posts, http.StatusOK, nil
@@ -415,26 +331,6 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 		return models.Post{}, status, fmt.Errorf("PostsUsecase.GetPostByID: failed to generate post's element: %w", err)
 	}
 
-	// TODO: change this hack
-	for i := range foundingPost.PreviewsPaths {
-		foundingPost.PreviewsPaths[i] = strings.ReplaceAll(foundingPost.PreviewsPaths[i], consts.HomeDirectory, "")
-	}
-
-	// TODO: detete after testing
-	// foundingPost.Previews = make(map[string]string, len(foundingPost.PreviewsPaths))
-
-	// for _, previewPath := range foundingPost.PreviewsPaths {
-	// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-	// 	if err != nil {
-	// 		return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to read preview file into base64: %w", err)
-	// 	}
-
-	// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
-	// 	fileName := previewPath[lastSlashIndex+1:]
-
-	// 	foundingPost.Previews[fileName] = decodedPreview
-	// }
-
 	return foundingPost, http.StatusOK, nil
 }
 
@@ -453,26 +349,6 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 		if err != nil || status != http.StatusOK {
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
-
-		// TODO: change this hack
-		for j := range posts[i].PreviewsPaths {
-			posts[i].PreviewsPaths[j] = strings.ReplaceAll(posts[i].PreviewsPaths[j], consts.HomeDirectory, "")
-		}
-
-		// TODO: delete after testing
-		// posts[i].Previews = make(map[string]string, len(posts[i].PreviewsPaths))
-
-		// for _, previewPath := range posts[i].PreviewsPaths {
-		// 	decodedPreview, err := common.ReadFileIntoBase64(previewPath)
-		// 	if err != nil {
-		// 		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to read preview file into base64: %w", err)
-		// 	}
-
-		// 	lastSlashIndex := strings.LastIndex(previewPath, "/")
-		// 	fileName := previewPath[lastSlashIndex+1:]
-
-		// 	posts[i].Previews[fileName] = decodedPreview
-		// }
 	}
 
 	return posts, http.StatusOK, nil

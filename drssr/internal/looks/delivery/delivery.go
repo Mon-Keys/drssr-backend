@@ -80,7 +80,7 @@ func (ld *LooksDelivery) addLook(w http.ResponseWriter, r *http.Request) {
 
 	look.CreatorID = user.ID
 
-	createdLook, status, err := ld.looksUseCase.AddLook(ctx, look)
+	createdLook, status, err := ld.looksUseCase.AddLook(ctx, user.Email, look)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to save look: %w", err)
 		ioutils.SendDefaultError(w, status)
@@ -135,7 +135,7 @@ func (ld *LooksDelivery) updateLook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedLook, status, err := ld.looksUseCase.UpdateLook(ctx, look, lid, user.ID)
+	updatedLook, status, err := ld.looksUseCase.UpdateLook(ctx, user.Email, look, lid, user.ID)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to update look: %w", err)
 		ioutils.SendDefaultError(w, status)

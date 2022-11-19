@@ -2,19 +2,21 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha1"
 	"drssr/config"
 	"drssr/internal/clothes/repository"
 	"drssr/internal/models"
 	"drssr/internal/pkg/classifier"
-	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
 	"drssr/internal/pkg/cutter"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/rollback"
 	"drssr/internal/pkg/similarity"
+	"encoding/hex"
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"strings"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -53,6 +55,7 @@ func NewClothesUsecase(
 
 type AddFileArgs struct {
 	UID        uint64
+	UserEmail  string
 	FileHeader *multipart.FileHeader
 	File       multipart.File
 }
@@ -62,6 +65,8 @@ func (cu *clothesUsecase) AddFile(
 	ctx context.Context,
 	args AddFileArgs,
 ) (models.Clothes, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
 	buf := make([]byte, args.FileHeader.Size)
 	_, err := args.File.Read(buf)
 	if err != nil {
@@ -71,7 +76,7 @@ func (cu *clothesUsecase) AddFile(
 	}
 
 	fileType := http.DetectContentType(buf)
-	if !common.IsEnabledFileType(fileType) {
+	if !file_utils.IsEnabledFileType(fileType) {
 		return models.Clothes{},
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.AddFile: not enabled file type")
@@ -88,6 +93,45 @@ func (cu *clothesUsecase) AddFile(
 	}
 	// TODO: add rollback for cutter
 
+	folderNameByte := sha1.New().Sum([]byte(args.UserEmail))
+	folderName := fmt.Sprintf(hex.EncodeToString(folderNameByte))
+
+	// saving clothes file
+	clothesFolderPath := fmt.Sprintf("%s/%s", consts.ClothesBaseFolderPath, folderName)
+	clothesFilePath := fmt.Sprintf("%s/%s/%s", consts.ClothesBaseFolderPath, folderName, args.FileHeader.Filename)
+
+	err = file_utils.SaveBase64ToFile(clothesFolderPath, clothesFilePath, res.Img)
+	if err != nil {
+		return models.Clothes{},
+			http.StatusInternalServerError,
+			fmt.Errorf("ClothesUsecase.AddFile: failed to save clothes's file: %w", err)
+	}
+
+	rb.Add(func() {
+		err := os.Remove(clothesFilePath)
+		if err != nil {
+			cu.logger.Errorf("ClothesUsecase.AddFile: failed to rollback creating of clothes's file: %w", err)
+		}
+	})
+
+	// saving masks file
+	masksFolderPath := fmt.Sprintf("%s/%s", consts.MasksBaseFolderPath, folderName)
+	masksFilePath := fmt.Sprintf("%s/%s/%s", consts.MasksBaseFolderPath, folderName, args.FileHeader.Filename)
+
+	err = file_utils.SaveBase64ToFile(masksFolderPath, masksFilePath, res.Mask)
+	if err != nil {
+		return models.Clothes{},
+			http.StatusInternalServerError,
+			fmt.Errorf("ClothesUsecase.AddFile: failed to save mask's file: %w", err)
+	}
+
+	rb.Add(func() {
+		err := os.Remove(masksFilePath)
+		if err != nil {
+			cu.logger.Errorf("ClothesUsecase.AddFile: failed to rollback creating of mask's file: %w", err)
+		}
+	})
+
 	clothesType, err := cu.classifierClient.RecognizePhoto(ctx, buf)
 	if err != nil {
 		return models.Clothes{},
@@ -98,8 +142,8 @@ func (cu *clothesUsecase) AddFile(
 	createdClothes, err := cu.psql.AddClothes(ctx, models.Clothes{
 		OwnerID:  args.UID,
 		Type:     clothesType,
-		ImgPath:  res.ImgPath,
-		MaskPath: res.MaskPath,
+		ImgPath:  clothesFilePath,
+		MaskPath: masksFilePath,
 	})
 	if err != nil {
 		return models.Clothes{},
@@ -107,21 +151,12 @@ func (cu *clothesUsecase) AddFile(
 			fmt.Errorf("ClothesUsecase.AddFile: failed to save clothes in db: %w", err)
 	}
 
-	ctx, rb := rollback.NewCtxRollback(ctx)
 	rb.Add(func() {
 		err := cu.psql.DeleteClothes(ctx, createdClothes.ID)
 		if err != nil {
 			cu.logger.Errorf("ClothesUsecase.AddFile: failed to rollback adding of clothes: %w", err)
 		}
 	})
-
-	// TODO: change this hack
-	createdClothes.ImgPath = strings.ReplaceAll(createdClothes.ImgPath, consts.HomeDirectory, "")
-	createdClothes.MaskPath = strings.ReplaceAll(createdClothes.MaskPath, consts.HomeDirectory, "")
-
-	// TODO: delete after testing
-	// createdClothes.Img = res.Img
-	// createdClothes.Mask = res.Mask
 
 	return createdClothes, http.StatusOK, nil
 }
@@ -151,28 +186,6 @@ func (cu *clothesUsecase) UpdateClothes(
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to update clothes in db: %w", err)
 	}
-
-	// TODO: change this hack
-	updatedClothes.ImgPath = strings.ReplaceAll(updatedClothes.ImgPath, consts.HomeDirectory, "")
-	updatedClothes.MaskPath = strings.ReplaceAll(updatedClothes.MaskPath, consts.HomeDirectory, "")
-
-	// TODO: delete after testing
-	// img, err := ioutil.ReadFile(updatedClothes.ImgPath)
-	// if err != nil {
-	// 	return models.Clothes{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read img file: %w", err)
-	// }
-
-	// mask, err := ioutil.ReadFile(updatedClothes.MaskPath)
-	// if err != nil {
-	// 	return models.Clothes{},
-	// 		http.StatusInternalServerError,
-	// 		fmt.Errorf("ClothesUsecase.UpdateClothes: failed to read mask file: %w", err)
-	// }
-
-	// updatedClothes.Img = base64.StdEncoding.EncodeToString(img)
-	// updatedClothes.Mask = base64.StdEncoding.EncodeToString(mask)
 
 	// processing similarity
 	go cu.processingSimilarity(ctx, updatedClothes)
@@ -267,33 +280,6 @@ func (cu *clothesUsecase) GetAllClothes(ctx context.Context, limit, offset int) 
 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to get clothes from db: %w", err)
 	}
 
-	// TODO: change this hack
-	for i := range clothes {
-		clothes[i].ImgPath = strings.ReplaceAll(clothes[i].ImgPath, consts.HomeDirectory, "")
-		clothes[i].MaskPath = strings.ReplaceAll(clothes[i].MaskPath, consts.HomeDirectory, "")
-	}
-
-	// TODO: delete after testing
-	// for i, v := range clothes {
-	// 	img, err := ioutil.ReadFile(v.ImgPath)
-	// 	if err != nil {
-	// 		return nil,
-	// 			http.StatusInternalServerError,
-	// 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open img %s file: %w", v.ImgPath, err)
-	// 	}
-
-	// 	clothes[i].Img = base64.StdEncoding.EncodeToString(img)
-
-	// 	mask, err := ioutil.ReadFile(v.MaskPath)
-	// 	if err != nil {
-	// 		return nil,
-	// 			http.StatusInternalServerError,
-	// 			fmt.Errorf("ClothesUsecase.GetAllClothes: failed to open mask %s file: %w", v.MaskPath, err)
-	// 	}
-
-	// 	clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-	// }
-
 	return clothes, http.StatusOK, nil
 }
 
@@ -304,32 +290,6 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to get clothes from db: %w", err)
 	}
-
-	// TODO: change this hack
-	for i := range clothes {
-		clothes[i].ImgPath = strings.ReplaceAll(clothes[i].ImgPath, consts.HomeDirectory, "")
-		clothes[i].MaskPath = strings.ReplaceAll(clothes[i].MaskPath, consts.HomeDirectory, "")
-	}
-
-	// for i, v := range clothes {
-	// 	img, err := ioutil.ReadFile(v.ImgPath)
-	// 	if err != nil {
-	// 		return nil,
-	// 			http.StatusInternalServerError,
-	// 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open img %s file: %w", v.ImgPath, err)
-	// 	}
-
-	// 	clothes[i].Img = base64.StdEncoding.EncodeToString(img)
-
-	// 	mask, err := ioutil.ReadFile(v.MaskPath)
-	// 	if err != nil {
-	// 		return nil,
-	// 			http.StatusInternalServerError,
-	// 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to open mask %s file: %w", v.MaskPath, err)
-	// 	}
-
-	// 	clothes[i].Mask = base64.StdEncoding.EncodeToString(mask)
-	// }
 
 	return clothes, http.StatusOK, nil
 }

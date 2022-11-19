@@ -9,13 +9,11 @@ from datetime import date, datetime
 import hashlib
 
 DIR = os.getcwd()
-UPLOAD_FOLDER = DIR + '/clothes'
-DONE_FOLDER = DIR + '/masks'
+TMP_FOLDER = DIR + '/tmp'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['DONE_FOLDER'] = DONE_FOLDER
+app.config['TMP_FOLDER'] = TMP_FOLDER
 app.secret_key = "secret"
 
 def allowed_file(filename):
@@ -34,35 +32,31 @@ def upload_file():
         if file.filename == '':
             return 'bad request', 400
 
-        today = date.today()
         now = datetime.now()
         now_ts = datetime.timestamp(now)
-        formated_today = today.strftime("%m-%d-%Y")
-        dir_name = hashlib.sha1(bytes(formated_today, 'utf-8')).hexdigest()
-        if not os.path.isdir(f'{UPLOAD_FOLDER}/{dir_name}'):
-            os.mkdir(path=f'{UPLOAD_FOLDER}/{dir_name}')
-            os.mkdir(path=f'{DONE_FOLDER}/{dir_name}')
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_ext = filename.split('.')[1]
-            img_path = f'{UPLOAD_FOLDER}/{dir_name}/{now_ts}.{file_ext}'
-            mask_path = f'{DONE_FOLDER}/{dir_name}/{now_ts}.png'
+            img_path = f'{TMP_FOLDER}/{now_ts}.{file_ext}'
+            mask_path = f'{TMP_FOLDER}/{now_ts}.png'
             file.save(img_path)
 
             cut(img_path=img_path, mask_path=mask_path)
 
             with open(img_path, "rb") as image_file:                
                 encoded_img = base64.b64encode(image_file.read()).decode("utf-8") 
+            
+            os.remove(img_path)
 
             with open(mask_path, "rb") as image_file:
                 encoded_mask = base64.b64encode(image_file.read()).decode("utf-8") 
 
+            os.remove(mask_path)
+
             return jsonify(
                 img=encoded_img,
-                img_path=img_path,
                 mask=encoded_mask,
-                mask_path=mask_path
             )
 
     return '''

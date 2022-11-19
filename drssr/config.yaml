@@ -2,26 +2,31 @@ drssr:
   port: ':3001'
 
 redis:
-  address: 'host.docker.internal:6379'
+  address: '127.0.0.1:6379'
+  # address: 'host.docker.internal:6379'
   password: ''
   db_name: 0
 
 postgres:
-  host: "host.docker.internal"
+  host: "127.0.0.1"
+  # host: "host.docker.internal"
   port: "5432"
   user: "admin"
   pass: "lolkek"
   name: "drssr"
 
 cutter:
-  url: 'http://host.docker.internal:5001'
+  url: 'http://127.0.0.1:5001'
+  # url: 'http://host.docker.internal:5001'
   timeout: 10s
 
 classifier:
-  url: 'host.docker.internal:5002'
+  url: '127.0.0.1:5002'
+  # url: 'host.docker.internal:5002'
 
 similarity:
-  url: 'http://host.docker.internal:5001'
+  url: 'http://127.0.0.1:5001'
+  # url: 'http://host.docker.internal:5001'
   timeout: 10s
 
 well_similarity_percent: 50

@@ -6,7 +6,5 @@ venv/
 
 dump.rdb
 
-/masks
-/clothes
-/drssr/looks
-/drssr/posts
+/cutter/tmp
+/drssr/media

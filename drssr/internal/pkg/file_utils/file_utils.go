@@ -1,4 +1,4 @@
-package common
+package file_utils
 
 import (
 	"bytes"
@@ -28,6 +28,20 @@ func ReadFileIntoBase64(filePath string) (string, error) {
 	decodedFile := base64.StdEncoding.EncodeToString(bytesImg)
 
 	return decodedFile, nil
+}
+
+func SaveBase64ToFile(folderPath, filePath, base64File string) error {
+	decodedImg, err := base64.StdEncoding.DecodeString(base64File)
+	if err != nil {
+		return fmt.Errorf("failed to decode base64 into byte : %w", err)
+	}
+
+	err = SaveFile(folderPath, filePath, decodedImg)
+	if err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	return nil
 }
 
 func OpenFileFromReq(r *http.Request, fileName string) (*multipart.File, *multipart.FileHeader, int, error) {

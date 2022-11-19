@@ -3,9 +3,9 @@ package delivery
 import (
 	"drssr/internal/clothes/usecase"
 	"drssr/internal/models"
-	"drssr/internal/pkg/common"
 	"drssr/internal/pkg/consts"
 	"drssr/internal/pkg/ctx_utils"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/ioutils"
 	middleware "drssr/internal/pkg/middlewares"
 	"net/http"
@@ -72,7 +72,7 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, fileHeader, status, err := common.OpenFileFromReq(r, "file")
+	file, fileHeader, status, err := file_utils.OpenFileFromReq(r, "file")
 	if err != nil {
 		logger.WithField("status", status).Errorf("Opening file error: %w", err)
 		ioutils.SendDefaultError(w, status)
@@ -81,6 +81,7 @@ func (cd *ClothesDelivery) addClothes(w http.ResponseWriter, r *http.Request) {
 
 	createdClothes, status, err := cd.clothesUseCase.AddFile(ctx, usecase.AddFileArgs{
 		UID:        user.ID,
+		UserEmail:  user.Email,
 		FileHeader: fileHeader,
 		File:       *file,
 	})

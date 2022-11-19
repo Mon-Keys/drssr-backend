@@ -16,16 +16,12 @@ type IPostgresqlRepository interface {
 
 	GetPostByID(ctx context.Context, pid uint64) (models.Post, error)
 	GetUserPosts(ctx context.Context, limit, offset int, uid uint64) ([]models.Post, error)
+	GetLikedPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error)
 	GetAllPosts(ctx context.Context, limit, offset int) ([]models.Post, error)
 
-	// AddLookClothesBind(ctx context.Context, clothes models.ClothesStruct, lid uint64) (models.ClothesStruct, error)
-	// DeleteLookClothesBind(ctx context.Context, bid uint64) error
-	// GetLookByID(ctx context.Context, lid uint64) (models.Look, error)
-	// UpdateLookByID(ctx context.Context, lid uint64, newLook models.Look) (models.Look, error)
-	// DeleteLookClothesBindsByID(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
-	// GetLookClothes(ctx context.Context, lid uint64) ([]models.ClothesStruct, error)
-	// GetUserLooks(ctx context.Context, limit, offset int, uid uint64) ([]models.Look, error)
-	// GetAllLooks(ctx context.Context, limit, offset int) ([]models.Look, error)
+	GetPostLikes(ctx context.Context, pid uint64) (int, error)
+	LikePost(ctx context.Context, uid, pid uint64) error
+	UnlikePost(ctx context.Context, uid, pid uint64) error
 }
 
 type postgresqlRepository struct {
@@ -243,4 +239,111 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 	}
 
 	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetLikedPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error) {
+	query := `SELECT
+		p.id,
+		p.type,
+		p.description,
+		p.element_id,
+		p.creator_id,
+		p.previews_paths,
+		p.created_at
+	FROM posts p
+	JOIN likes l ON l.post_id = p.id
+	WHERE l.user_id = $1;`
+	var l string
+	if limit > 0 {
+		l = fmt.Sprintf(" LIMIT %d", limit)
+	}
+	var o string
+	if offset > 0 {
+		o = fmt.Sprintf(" OFFSET %d", offset)
+	}
+	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o), uid)
+	if err != nil {
+		return []models.Post{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.Post
+	var row models.Post
+	for rows.Next() {
+		err := rows.Scan(
+			&row.ID,
+			&row.Type,
+			&row.Description,
+			&row.ElementID,
+			&row.CreatorID,
+			&row.PreviewsPaths,
+			&row.Ctime,
+		)
+		if err != nil {
+			return []models.Post{}, err
+		}
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.Post{}, err
+	}
+
+	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetPostLikes(ctx context.Context, pid uint64) (int, error) {
+	var counter int
+	err := pr.conn.QueryRow(
+		`SELECT COUNT(*) FROM likes WHERE post_id = $1;`,
+		pid,
+	).Scan(
+		&counter,
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return counter, nil
+}
+
+func (pr *postgresqlRepository) LikePost(ctx context.Context, uid, pid uint64) error {
+	var createdLikeID uint64
+	err := pr.conn.QueryRow(
+		`INSERT INTO likes (post_id, user_id)
+		VALUES ($1, $2)
+		RETURNING
+			id;`,
+		pid,
+		uid,
+	).Scan(
+		&createdLikeID,
+	)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pr *postgresqlRepository) UnlikePost(ctx context.Context, uid, pid uint64) error {
+	var deletedLikeID uint64
+	err := pr.conn.QueryRow(
+		`DELETE FROM likes WHERE post_id = $1 AND user_id = $2
+		RETURNING
+			id;`,
+		pid,
+		uid,
+	).Scan(
+		&deletedLikeID,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil
+		} else {
+			return err
+		}
+	}
+	return nil
 }

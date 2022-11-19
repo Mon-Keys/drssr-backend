@@ -38,6 +38,10 @@ func SetPostsRouting(
 	looksPrivateAPI.HandleFunc("", postsDelivery.deletePost).Methods(http.MethodDelete)
 	looksPrivateAPI.HandleFunc("/all", postsDelivery.getUserPosts).Methods(http.MethodGet)
 
+	looksPrivateAPI.HandleFunc("/likes", postsDelivery.likePost).Methods(http.MethodPost)
+	looksPrivateAPI.HandleFunc("/likes", postsDelivery.unlikePost).Methods(http.MethodDelete)
+	looksPrivateAPI.HandleFunc("/likes", postsDelivery.getLikedPosts).Methods(http.MethodGet)
+
 	looksPublicAPI := router.PathPrefix("/api/v1/public/posts").Subrouter()
 	looksPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON)
 
@@ -186,6 +190,144 @@ func (pd *PostsDelivery) getUserPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ioutils.Send(w, status, posts)
+}
+
+func (pd *PostsDelivery) getLikedPosts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := pd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	pd.logger = *pd.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	queryParams := r.URL.Query()
+
+	limitStr := queryParams.Get("limit")
+	limitInt := 0
+	if limitStr != "" {
+		limitInt, err := strconv.Atoi(limitStr)
+		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	offsetStr := queryParams.Get("offset")
+	offsetInt := 0
+	if offsetStr != "" {
+		offsetInt, err := strconv.Atoi(offsetStr)
+		if err != nil || offsetInt < 0 {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	posts, status, err := pd.postsUseCase.GetLikedPosts(ctx, user.ID, limitInt, offsetInt)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get user's likes posts: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, posts)
+}
+
+func (pd *PostsDelivery) likePost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := pd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	pidParam := r.URL.Query().Get("id")
+	if pidParam == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Empty look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+	pid, err := strconv.ParseUint(pidParam, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if pid == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	likes, status, err := pd.postsUseCase.LikePost(ctx, user.ID, pid)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get post by ID: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, likes)
+}
+
+func (pd *PostsDelivery) unlikePost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := pd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	pidParam := r.URL.Query().Get("id")
+	if pidParam == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Empty look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+	pid, err := strconv.ParseUint(pidParam, 10, 64)
+	if err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	if pid == 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid look id param")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	likes, status, err := pd.postsUseCase.UnlikePost(ctx, user.ID, pid)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get post by ID: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, likes)
 }
 
 func (pd *PostsDelivery) getPost(w http.ResponseWriter, r *http.Request) {

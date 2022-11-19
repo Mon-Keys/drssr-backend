@@ -89,6 +89,8 @@ func easyjson5a72dc82DecodeDrssrInternalModels(in *jlexer.Lexer, out *Post) {
 				}
 				in.Delim(']')
 			}
+		case "likes":
+			out.Likes = int(in.Int())
 		default:
 			in.SkipRecursive()
 		}
@@ -175,6 +177,11 @@ func easyjson5a72dc82EncodeDrssrInternalModels(out *jwriter.Writer, in Post) {
 			out.RawByte(']')
 		}
 	}
+	{
+		const prefix string = ",\"likes\":"
+		out.RawString(prefix)
+		out.Int(int(in.Likes))
+	}
 	out.RawByte('}')
 }
 
@@ -201,7 +208,73 @@ func (v *Post) UnmarshalJSON(data []byte) error {
 func (v *Post) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson5a72dc82DecodeDrssrInternalModels(l, v)
 }
-func easyjson5a72dc82DecodeDrssrInternalModels1(in *jlexer.Lexer, out *ArrayPosts) {
+func easyjson5a72dc82DecodeDrssrInternalModels1(in *jlexer.Lexer, out *LikesStruct) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "likes":
+			out.Likes = int(in.Int())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson5a72dc82EncodeDrssrInternalModels1(out *jwriter.Writer, in LikesStruct) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"likes\":"
+		out.RawString(prefix[1:])
+		out.Int(int(in.Likes))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v LikesStruct) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson5a72dc82EncodeDrssrInternalModels1(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v LikesStruct) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson5a72dc82EncodeDrssrInternalModels1(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *LikesStruct) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson5a72dc82DecodeDrssrInternalModels1(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *LikesStruct) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson5a72dc82DecodeDrssrInternalModels1(l, v)
+}
+func easyjson5a72dc82DecodeDrssrInternalModels2(in *jlexer.Lexer, out *ArrayPosts) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		in.Skip()
@@ -229,7 +302,7 @@ func easyjson5a72dc82DecodeDrssrInternalModels1(in *jlexer.Lexer, out *ArrayPost
 		in.Consumed()
 	}
 }
-func easyjson5a72dc82EncodeDrssrInternalModels1(out *jwriter.Writer, in ArrayPosts) {
+func easyjson5a72dc82EncodeDrssrInternalModels2(out *jwriter.Writer, in ArrayPosts) {
 	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
 		out.RawString("null")
 	} else {
@@ -247,23 +320,23 @@ func easyjson5a72dc82EncodeDrssrInternalModels1(out *jwriter.Writer, in ArrayPos
 // MarshalJSON supports json.Marshaler interface
 func (v ArrayPosts) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson5a72dc82EncodeDrssrInternalModels1(&w, v)
+	easyjson5a72dc82EncodeDrssrInternalModels2(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ArrayPosts) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson5a72dc82EncodeDrssrInternalModels1(w, v)
+	easyjson5a72dc82EncodeDrssrInternalModels2(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ArrayPosts) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson5a72dc82DecodeDrssrInternalModels1(&r, v)
+	easyjson5a72dc82DecodeDrssrInternalModels2(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ArrayPosts) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson5a72dc82DecodeDrssrInternalModels1(l, v)
+	easyjson5a72dc82DecodeDrssrInternalModels2(l, v)
 }

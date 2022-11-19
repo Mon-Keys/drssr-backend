@@ -39,7 +39,7 @@ def upload_file():
             filename = secure_filename(file.filename)
             file_ext = filename.split('.')[1]
             img_path = f'{TMP_FOLDER}/{now_ts}.{file_ext}'
-            mask_path = f'{TMP_FOLDER}/{now_ts}.png'
+            mask_path = f'{TMP_FOLDER}/{now_ts}_mask.png'
             file.save(img_path)
 
             cut(img_path=img_path, mask_path=mask_path)

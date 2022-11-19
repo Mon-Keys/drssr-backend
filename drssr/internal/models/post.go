@@ -20,8 +20,14 @@ type Post struct {
 	Look          Look              `json:"look,omitempty" db:"-"`
 	Previews      map[string]string `json:"previews" db:"-"`
 	PreviewsPaths []string          `json:"previews_paths" db:"previews_paths"`
+	Likes         int               `json:"likes" db:"-"`
 	Ctime         time.Time         `json:"-" db:"created_at"`
 }
 
 //easyjson:json
 type ArrayPosts []Post
+
+//easyjson:json
+type LikesStruct struct {
+	Likes int `json:"likes" db:"-"`
+}

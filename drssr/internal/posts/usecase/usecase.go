@@ -26,7 +26,11 @@ type IPostUsecase interface {
 
 	GetPostByID(ctx context.Context, pid uint64) (models.Post, int, error)
 	GetUserPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
+	GetLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
 	GetAllPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error)
+
+	LikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
+	UnlikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
 }
 
 type postsUsecase struct {
@@ -306,6 +310,11 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 		if err != nil || status != http.StatusOK {
 			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
 		}
+
+		posts[i].Likes, err = pu.psql.GetPostLikes(ctx, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to get post's likes: %w", err)
+		}
 	}
 
 	return posts, http.StatusOK, nil
@@ -331,6 +340,11 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 		return models.Post{}, status, fmt.Errorf("PostsUsecase.GetPostByID: failed to generate post's element: %w", err)
 	}
 
+	foundingPost.Likes, err = pu.psql.GetPostLikes(ctx, foundingPost.ID)
+	if err != nil {
+		return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to get post's likes: %w", err)
+	}
+
 	return foundingPost, http.StatusOK, nil
 }
 
@@ -338,18 +352,100 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 	posts, err := pu.psql.GetAllPosts(ctx, limit, offset)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetUserPosts: user don't have any looks")
+			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetAllPosts: not found any posts")
 		}
-		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetUserPosts: failed to get user looks from db: %w", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get user posts from db: %w", err)
 	}
 
 	for i := range posts {
 		var status int
 		posts[i], status, err = pu.generateElement(ctx, posts[i])
 		if err != nil || status != http.StatusOK {
-			return nil, status, fmt.Errorf("PostsUsecase.GetUserPosts: failed to generate post's element: %w", err)
+			return nil, status, fmt.Errorf("PostsUsecase.GetAllPosts: failed to generate post's element: %w", err)
+		}
+
+		posts[i].Likes, err = pu.psql.GetPostLikes(ctx, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get post's likes: %w", err)
 		}
 	}
 
 	return posts, http.StatusOK, nil
+}
+
+func (pu *postsUsecase) GetLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error) {
+	posts, err := pu.psql.GetLikedPosts(ctx, uid, limit, offset)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetLikedPosts: user don't have any liked posts")
+		}
+		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetLikedPosts: failed to get user posts from db: %w", err)
+	}
+
+	for i := range posts {
+		var status int
+		posts[i], status, err = pu.generateElement(ctx, posts[i])
+		if err != nil || status != http.StatusOK {
+			return nil, status, fmt.Errorf("PostsUsecase.GetLikedPosts: failed to generate post's element: %w", err)
+		}
+
+		posts[i].Likes, err = pu.psql.GetPostLikes(ctx, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetLikedPosts: failed to get post's likes: %w", err)
+		}
+	}
+
+	return posts, http.StatusOK, nil
+}
+
+func (pu *postsUsecase) LikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	err := pu.psql.LikePost(ctx, uid, pid)
+	if err != nil {
+		return models.LikesStruct{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.LikePost: failed to like post: %w", err)
+	}
+
+	rb.Add(func() {
+		rb.Add(func() {
+			err := pu.psql.UnlikePost(ctx, uid, pid)
+			if err != nil {
+				pu.logger.Errorf("PostsUsecase.LikePost: failed to rollback liking of post: %w", err)
+			}
+		})
+	})
+
+	likesCount, err := pu.psql.GetPostLikes(ctx, pid)
+	if err != nil {
+		rb.Run()
+
+		return models.LikesStruct{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.LikePost: failed to get update count of likes: %w", err)
+	}
+
+	return models.LikesStruct{Likes: likesCount}, http.StatusOK, nil
+}
+
+func (pu *postsUsecase) UnlikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	err := pu.psql.UnlikePost(ctx, uid, pid)
+	if err != nil {
+		return models.LikesStruct{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.UnlikePost: failed to unlike post: %w", err)
+	}
+
+	rb.Add(func() {
+		rb.Add(func() {
+			err := pu.psql.LikePost(ctx, uid, pid)
+			if err != nil {
+				pu.logger.Errorf("PostsUsecase.UnlikePost: failed to rollback unlicking of post: %w", err)
+			}
+		})
+	})
+
+	likesCount, err := pu.psql.GetPostLikes(ctx, pid)
+	if err != nil {
+		return models.LikesStruct{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.UnlikePost: failed to get update count of likes: %w", err)
+	}
+
+	return models.LikesStruct{Likes: likesCount}, http.StatusOK, nil
 }

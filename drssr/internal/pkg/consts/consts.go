@@ -7,6 +7,7 @@ const (
 	MasksBaseFolderPath   = "./media/masks"
 	LooksBaseFolderPath   = "./media/looks"
 	PostsBaseFolderPath   = "./media/posts"
+	FileExt               = "webp"
 )
 
 // clothes
@@ -19,6 +20,7 @@ const (
 	GetLooksLimit = 1000
 )
 
-// TODO: CHANGE!!!!!!!
-// oh oh oh DIRTY hack
-const HomeDirectory = "/home/pierrelean/drssr-backend/"
+// posts
+const (
+	GetPostsLimit = 1000
+)

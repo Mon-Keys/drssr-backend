@@ -53,18 +53,25 @@ func easyjson5a72dc82DecodeDrssrInternalModels(in *jlexer.Lexer, out *Post) {
 		case "previews":
 			if in.IsNull() {
 				in.Skip()
+				out.Previews = nil
 			} else {
-				in.Delim('{')
-				out.Previews = make(map[string]string)
-				for !in.IsDelim('}') {
-					key := string(in.String())
-					in.WantColon()
+				in.Delim('[')
+				if out.Previews == nil {
+					if !in.IsDelim(']') {
+						out.Previews = make([]string, 0, 4)
+					} else {
+						out.Previews = []string{}
+					}
+				} else {
+					out.Previews = (out.Previews)[:0]
+				}
+				for !in.IsDelim(']') {
 					var v1 string
 					v1 = string(in.String())
-					(out.Previews)[key] = v1
+					out.Previews = append(out.Previews, v1)
 					in.WantComma()
 				}
-				in.Delim('}')
+				in.Delim(']')
 			}
 		case "previews_paths":
 			if in.IsNull() {
@@ -143,22 +150,17 @@ func easyjson5a72dc82EncodeDrssrInternalModels(out *jwriter.Writer, in Post) {
 	{
 		const prefix string = ",\"previews\":"
 		out.RawString(prefix)
-		if in.Previews == nil && (out.Flags&jwriter.NilMapAsEmpty) == 0 {
-			out.RawString(`null`)
+		if in.Previews == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+			out.RawString("null")
 		} else {
-			out.RawByte('{')
-			v3First := true
-			for v3Name, v3Value := range in.Previews {
-				if v3First {
-					v3First = false
-				} else {
+			out.RawByte('[')
+			for v3, v4 := range in.Previews {
+				if v3 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v3Name))
-				out.RawByte(':')
-				out.String(string(v3Value))
+				out.String(string(v4))
 			}
-			out.RawByte('}')
+			out.RawByte(']')
 		}
 	}
 	{
@@ -168,11 +170,11 @@ func easyjson5a72dc82EncodeDrssrInternalModels(out *jwriter.Writer, in Post) {
 			out.RawString("null")
 		} else {
 			out.RawByte('[')
-			for v4, v5 := range in.PreviewsPaths {
-				if v4 > 0 {
+			for v5, v6 := range in.PreviewsPaths {
+				if v5 > 0 {
 					out.RawByte(',')
 				}
-				out.String(string(v5))
+				out.String(string(v6))
 			}
 			out.RawByte(']')
 		}
@@ -291,9 +293,9 @@ func easyjson5a72dc82DecodeDrssrInternalModels2(in *jlexer.Lexer, out *ArrayPost
 			*out = (*out)[:0]
 		}
 		for !in.IsDelim(']') {
-			var v6 Post
-			(v6).UnmarshalEasyJSON(in)
-			*out = append(*out, v6)
+			var v7 Post
+			(v7).UnmarshalEasyJSON(in)
+			*out = append(*out, v7)
 			in.WantComma()
 		}
 		in.Delim(']')
@@ -307,11 +309,11 @@ func easyjson5a72dc82EncodeDrssrInternalModels2(out *jwriter.Writer, in ArrayPos
 		out.RawString("null")
 	} else {
 		out.RawByte('[')
-		for v7, v8 := range in {
-			if v7 > 0 {
+		for v8, v9 := range in {
+			if v8 > 0 {
 				out.RawByte(',')
 			}
-			(v8).MarshalEasyJSON(out)
+			(v9).MarshalEasyJSON(out)
 		}
 		out.RawByte(']')
 	}

@@ -6,7 +6,6 @@ import "time"
 type Look struct {
 	ID          uint64          `json:"id" db:"id"`
 	Description string          `json:"description" db:"description"`
-	Filename    string          `json:"filename,omitempty"`
 	CreatorID   uint64          `json:"creator_id" db:"creator_id"`
 	Clothes     []ClothesStruct `json:"clothes" db:"-"`
 	ImgPath     string          `json:"img_path" db:"img"`

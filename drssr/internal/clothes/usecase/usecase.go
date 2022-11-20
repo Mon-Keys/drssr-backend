@@ -91,14 +91,14 @@ func (cu *clothesUsecase) AddFile(
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.AddFile: failed to upload img in cutter: %w", err)
 	}
-	// TODO: add rollback for cutter
 
 	folderNameByte := sha1.New().Sum([]byte(args.UserEmail))
 	folderName := fmt.Sprintf(hex.EncodeToString(folderNameByte))
 
 	// saving clothes file
+	clothesFileName := file_utils.GenerateFileName("clothes", consts.FileExt)
 	clothesFolderPath := fmt.Sprintf("%s/%s", consts.ClothesBaseFolderPath, folderName)
-	clothesFilePath := fmt.Sprintf("%s/%s/%s", consts.ClothesBaseFolderPath, folderName, args.FileHeader.Filename)
+	clothesFilePath := fmt.Sprintf("%s/%s/%s", consts.ClothesBaseFolderPath, folderName, clothesFileName)
 
 	err = file_utils.SaveBase64ToFile(clothesFolderPath, clothesFilePath, res.Img)
 	if err != nil {
@@ -115,8 +115,9 @@ func (cu *clothesUsecase) AddFile(
 	})
 
 	// saving masks file
+	maskFileName := file_utils.GenerateFileName("mask", consts.FileExt)
 	masksFolderPath := fmt.Sprintf("%s/%s", consts.MasksBaseFolderPath, folderName)
-	masksFilePath := fmt.Sprintf("%s/%s/%s", consts.MasksBaseFolderPath, folderName, args.FileHeader.Filename)
+	masksFilePath := fmt.Sprintf("%s/%s/%s", consts.MasksBaseFolderPath, folderName, maskFileName)
 
 	err = file_utils.SaveBase64ToFile(masksFolderPath, masksFilePath, res.Mask)
 	if err != nil {

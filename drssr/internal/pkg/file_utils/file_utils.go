@@ -2,8 +2,10 @@ package file_utils
 
 import (
 	"bytes"
+	"crypto/rand"
 	"drssr/internal/pkg/consts"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 func ReadFileIntoBase64(filePath string) (string, error) {
@@ -117,9 +120,9 @@ func IsEnabledFileType(fileType string) bool {
 
 func IsEnabledExt(fileType string) bool {
 	imgTypes := map[string]bool{
-		".jpg":  true,
-		".jpeg": true,
-		".png":  true,
+		"jpg":  true,
+		"jpeg": true,
+		"png":  true,
 	}
 
 	return imgTypes[fileType]
@@ -128,4 +131,10 @@ func IsEnabledExt(fileType string) bool {
 func GetExtFromFileType(fileType string) string {
 	_, after, _ := strings.Cut(fileType, "/")
 	return after
+}
+
+func GenerateFileName(prefix, ext string) string {
+	randBytes := make([]byte, 16)
+	rand.Read(randBytes)
+	return fmt.Sprintf("%s_%s_%d.%s", prefix, hex.EncodeToString(randBytes), time.Now().UnixMilli(), ext)
 }

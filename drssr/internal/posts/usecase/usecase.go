@@ -181,18 +181,18 @@ func (pu *postsUsecase) AddPost(
 	folderName := hex.EncodeToString(folderNameByte)
 	folderPath := fmt.Sprintf("%s/%s", consts.PostsBaseFolderPath, folderName)
 
-	for fileName, preview := range post.Previews {
-		// checking file ext
-		splitedFilename := strings.Split(fileName, ".")
-		ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-		if !file_utils.IsEnabledExt(ext) {
-			rb.Run()
+	for _, preview := range post.Previews {
+		// TODO: delete if not needed
+		// // checking file ext
+		// if !file_utils.IsEnabledExt(preview.Ext) {
+		// 	rb.Run()
 
-			return models.Post{},
-				http.StatusInternalServerError,
-				fmt.Errorf("PostsUsecase.AddPost: not enabled file extension")
-		}
+		// 	return models.Post{},
+		// 		http.StatusInternalServerError,
+		// 		fmt.Errorf("PostsUsecase.AddPost: not enabled file extension")
+		// }
 
+		fileName := file_utils.GenerateFileName("post", consts.FileExt)
 		filePath := fmt.Sprintf("%s/%s/%s", consts.PostsBaseFolderPath, folderName, fileName)
 
 		err = file_utils.SaveBase64ToFile(folderPath, filePath, preview)

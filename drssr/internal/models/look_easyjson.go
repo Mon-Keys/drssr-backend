@@ -40,8 +40,6 @@ func easyjson9db9635DecodeDrssrInternalModels(in *jlexer.Lexer, out *Look) {
 			out.ID = uint64(in.Uint64())
 		case "description":
 			out.Description = string(in.String())
-		case "filename":
-			out.Filename = string(in.String())
 		case "creator_id":
 			out.CreatorID = uint64(in.Uint64())
 		case "clothes":
@@ -94,11 +92,6 @@ func easyjson9db9635EncodeDrssrInternalModels(out *jwriter.Writer, in Look) {
 		const prefix string = ",\"description\":"
 		out.RawString(prefix)
 		out.String(string(in.Description))
-	}
-	if in.Filename != "" {
-		const prefix string = ",\"filename\":"
-		out.RawString(prefix)
-		out.String(string(in.Filename))
 	}
 	{
 		const prefix string = ",\"creator_id\":"

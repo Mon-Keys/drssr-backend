@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
@@ -54,20 +53,20 @@ func (lu *looksUsecase) AddLook(
 ) (models.Look, int, error) {
 	ctx, rb := rollback.NewCtxRollback(ctx)
 
-	// checking file ext
-	splitedFilename := strings.Split(look.Filename, ".")
-	ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-	if !file_utils.IsEnabledExt(ext) {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.AddLook: not enabled file extension")
-	}
+	// TODO: delete if not needed
+	// // checking file ext
+	// if !file_utils.IsEnabledExt(look.FileExt) {
+	// 	return models.Look{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("LooksUsecase.AddLook: not enabled file extension")
+	// }
 
 	folderNameByte := sha1.New().Sum([]byte(userEmail))
 	folderName := fmt.Sprintf(hex.EncodeToString(folderNameByte))
 
+	fileName := file_utils.GenerateFileName("look", consts.FileExt)
 	folderPath := fmt.Sprintf("%s/%s", consts.LooksBaseFolderPath, folderName)
-	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, look.Filename)
+	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, fileName)
 	look.ImgPath = filePath
 
 	err := file_utils.SaveBase64ToFile(folderPath, filePath, look.Img)
@@ -168,20 +167,20 @@ func (lu *looksUsecase) UpdateLook(
 			fmt.Errorf("LooksUsecase.UpdateLook: can't update not user's look")
 	}
 
-	// checking file ext
-	splitedFilename := strings.Split(newLook.Filename, ".")
-	ext := fmt.Sprintf(".%s", splitedFilename[len(splitedFilename)-1])
-	if !file_utils.IsEnabledExt(ext) {
-		return models.Look{},
-			http.StatusInternalServerError,
-			fmt.Errorf("LooksUsecase.UpdateLook: not enabled file extension")
-	}
+	// TODO: delete if not needed
+	// // checking file ext
+	// if !file_utils.IsEnabledExt(newLook.FileExt) {
+	// 	return models.Look{},
+	// 		http.StatusInternalServerError,
+	// 		fmt.Errorf("LooksUsecase.UpdateLook: not enabled file extension")
+	// }
 
 	folderNameByte := sha1.New().Sum([]byte(userEmail))
 	folderName := hex.EncodeToString(folderNameByte)
 
+	fileName := file_utils.GenerateFileName("look", consts.FileExt)
 	folderPath := fmt.Sprintf("%s/%s", consts.LooksBaseFolderPath, folderName)
-	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, newLook.Filename)
+	filePath := fmt.Sprintf("%s/%s/%s", consts.LooksBaseFolderPath, folderName, fileName)
 	newLook.ImgPath = filePath
 
 	err = file_utils.SaveBase64ToFile(folderPath, filePath, newLook.Img)

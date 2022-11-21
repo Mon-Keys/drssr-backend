@@ -26,6 +26,8 @@ type IUserUsecase interface {
 	DeleteUser(ctx context.Context, user models.User, cookieValue string) (int, error)
 
 	CheckStatus(ctx context.Context) (int, error)
+
+	BecomeStylist(ctx context.Context, uid uint64) (models.User, int, error)
 }
 
 type userUsecase struct {
@@ -273,4 +275,15 @@ func (uu *userUsecase) DeleteUser(ctx context.Context, user models.User, cookieV
 	}
 
 	return http.StatusOK, nil
+}
+
+func (uu *userUsecase) BecomeStylist(ctx context.Context, uid uint64) (models.User, int, error) {
+	updatedUser, err := uu.psql.BecomeStylist(ctx, uid)
+	if err != nil {
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.BecomeStylist: failed to update user's stylist flag: %w", err)
+	}
+
+	return updatedUser, http.StatusOK, nil
 }

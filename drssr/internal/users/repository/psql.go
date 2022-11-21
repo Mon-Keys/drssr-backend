@@ -20,6 +20,8 @@ type IPostgresqlRepository interface {
 	DeleteUser(ctx context.Context, uid uint64) error
 
 	CheckStatus(ctx context.Context) (int, error)
+
+	BecomeStylist(ctx context.Context, uid uint64) (models.User, error)
 }
 
 type postgresqlRepository struct {
@@ -238,7 +240,10 @@ func (pr *postgresqlRepository) AddUser(ctx context.Context, user models.SignupC
 			id,
 			nickname,
 			email,
+			password,
 			name,
+			avatar,
+			stylist,
 			date_part('year', age(birth_date)) as age,
 			description,
 			created_at;`,
@@ -252,7 +257,10 @@ func (pr *postgresqlRepository) AddUser(ctx context.Context, user models.SignupC
 		&createdUser.ID,
 		&createdUser.Nickname,
 		&createdUser.Email,
+		&createdUser.Password,
 		&createdUser.Name,
+		&createdUser.Avatar,
+		&createdUser.Stylist,
 		&createdUser.Age,
 		&createdUser.Desc,
 		&createdUser.Ctime,
@@ -274,7 +282,10 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 			id,
 			nickname,
 			email,
+			password,
 			name,
+			avatar,
+			stylist,
 			date_part('year', age(birth_date)) as age,
 			description,
 			created_at;`,
@@ -288,7 +299,10 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 		&updatedUser.ID,
 		&updatedUser.Nickname,
 		&updatedUser.Email,
+		&updatedUser.Password,
 		&updatedUser.Name,
+		&updatedUser.Avatar,
+		&updatedUser.Stylist,
 		&updatedUser.Age,
 		&updatedUser.Desc,
 		&updatedUser.Ctime,
@@ -318,4 +332,41 @@ func (pr *postgresqlRepository) DeleteUser(ctx context.Context, uid uint64) erro
 		}
 	}
 	return nil
+}
+
+func (pr *postgresqlRepository) BecomeStylist(ctx context.Context, uid uint64) (models.User, error) {
+	var updatedUser models.User
+	err := pr.conn.QueryRow(
+		`UPDATE users
+		SET stylist = true
+		WHERE id = $1
+		RETURNING
+			id,
+			nickname,
+			email,
+			password,
+			name,
+			avatar,
+			stylist,
+			date_part('year', age(birth_date)) as age,
+			description,
+			created_at;`,
+		uid,
+	).Scan(
+		&updatedUser.ID,
+		&updatedUser.Nickname,
+		&updatedUser.Email,
+		&updatedUser.Password,
+		&updatedUser.Name,
+		&updatedUser.Avatar,
+		&updatedUser.Stylist,
+		&updatedUser.Age,
+		&updatedUser.Desc,
+		&updatedUser.Ctime,
+	)
+
+	if err != nil {
+		return models.User{}, err
+	}
+	return updatedUser, nil
 }

@@ -48,6 +48,7 @@ func SetUserRouting(
 	userPrivateAPI.HandleFunc("", userDelivery.updateUser).Methods(http.MethodPut)
 	userPrivateAPI.HandleFunc("", userDelivery.deleteUser).Methods(http.MethodDelete)
 	userPrivateAPI.HandleFunc("/logout", userDelivery.logout).Methods(http.MethodDelete)
+	userPrivateAPI.HandleFunc("/stylist", userDelivery.becomeStylist).Methods(http.MethodPost)
 
 	// TODO: move
 	router.HandleFunc("/health", userDelivery.statusHandler)
@@ -317,4 +318,35 @@ func (ud *UserDelivery) logout(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, cookie)
 	ioutils.SendWithoutBody(w, status)
+}
+
+func (ud *UserDelivery) becomeStylist(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ud.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	updatedUser, status, err := ud.userUseCase.BecomeStylist(ctx, user.ID)
+	if err != nil || status != http.StatusOK {
+		logger.WithField(
+			"status",
+			status,
+		).Errorf("Failed to update user's stylist flag: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, http.StatusOK, updatedUser)
 }

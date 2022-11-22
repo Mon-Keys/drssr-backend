@@ -144,7 +144,7 @@ func (cd *ClothesDelivery) updateClothes(w http.ResponseWriter, r *http.Request)
 
 	updatedClothes, status, err := cd.clothesUseCase.UpdateClothes(ctx, user.ID, newClothesData)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to update clothes: %w", err)
+		logger.WithField("status", status).Errorf("Failed to update clothes: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}
@@ -192,7 +192,7 @@ func (cd *ClothesDelivery) deleteClothes(w http.ResponseWriter, r *http.Request)
 
 	status, err := cd.clothesUseCase.DeleteClothes(ctx, user.ID, clothesID)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to delete clothes: %w", err)
+		logger.WithField("status", status).Errorf("Failed to delete clothes: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}

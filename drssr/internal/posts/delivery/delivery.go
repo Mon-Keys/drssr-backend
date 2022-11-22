@@ -160,10 +160,12 @@ func (pd *PostsDelivery) getUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	queryParams := r.URL.Query()
 
+	var err error
+
 	limitStr := queryParams.Get("limit")
 	limitInt := 0
 	if limitStr != "" {
-		limitInt, err := strconv.Atoi(limitStr)
+		limitInt, err = strconv.Atoi(limitStr)
 		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -174,7 +176,7 @@ func (pd *PostsDelivery) getUserPosts(w http.ResponseWriter, r *http.Request) {
 	offsetStr := queryParams.Get("offset")
 	offsetInt := 0
 	if offsetStr != "" {
-		offsetInt, err := strconv.Atoi(offsetStr)
+		offsetInt, err = strconv.Atoi(offsetStr)
 		if err != nil || offsetInt < 0 {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -212,10 +214,12 @@ func (pd *PostsDelivery) getLikedPosts(w http.ResponseWriter, r *http.Request) {
 
 	queryParams := r.URL.Query()
 
+	var err error
+
 	limitStr := queryParams.Get("limit")
 	limitInt := 0
 	if limitStr != "" {
-		limitInt, err := strconv.Atoi(limitStr)
+		limitInt, err = strconv.Atoi(limitStr)
 		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -226,7 +230,7 @@ func (pd *PostsDelivery) getLikedPosts(w http.ResponseWriter, r *http.Request) {
 	offsetStr := queryParams.Get("offset")
 	offsetInt := 0
 	if offsetStr != "" {
-		offsetInt, err := strconv.Atoi(offsetStr)
+		offsetInt, err = strconv.Atoi(offsetStr)
 		if err != nil || offsetInt < 0 {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -377,10 +381,12 @@ func (pd *PostsDelivery) getAllPosts(w http.ResponseWriter, r *http.Request) {
 
 	queryParams := r.URL.Query()
 
+	var err error
+
 	limitStr := queryParams.Get("limit")
 	limitInt := 0
 	if limitStr != "" {
-		limitInt, err := strconv.Atoi(limitStr)
+		limitInt, err = strconv.Atoi(limitStr)
 		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)
@@ -391,7 +397,7 @@ func (pd *PostsDelivery) getAllPosts(w http.ResponseWriter, r *http.Request) {
 	offsetStr := queryParams.Get("offset")
 	offsetInt := 0
 	if offsetStr != "" {
-		offsetInt, err := strconv.Atoi(offsetStr)
+		offsetInt, err = strconv.Atoi(offsetStr)
 		if err != nil || offsetInt < 0 {
 			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
 			ioutils.SendDefaultError(w, http.StatusBadRequest)

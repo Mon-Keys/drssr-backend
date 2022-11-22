@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/jackc/pgx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -170,6 +171,11 @@ func (cu *clothesUsecase) UpdateClothes(
 ) (models.Clothes, int, error) {
 	clothes, err := cu.psql.GetClothesByID(ctx, newClothersData.ID)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return models.Clothes{},
+				http.StatusNotFound,
+				fmt.Errorf("ClothesUsecase.UpdateClothes: failed to found clothes for update: %w", err)
+		}
 		return models.Clothes{},
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.UpdateClothes: failed to get clothes form db: %w", err)

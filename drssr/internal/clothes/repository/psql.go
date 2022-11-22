@@ -64,6 +64,8 @@ func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.C
 		RETURNING
 			id,
 			type,
+			name,
+			description,
 			img,
 			mask,
 			owner_id,
@@ -75,6 +77,8 @@ func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.C
 	).Scan(
 		&createdClothes.ID,
 		&createdClothes.Type,
+		&createdClothes.Name,
+		&createdClothes.Desc,
 		&createdClothes.ImgPath,
 		&createdClothes.MaskPath,
 		&createdClothes.OwnerID,
@@ -91,11 +95,13 @@ func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesDat
 	var updatedClothes models.Clothes
 	err := pr.conn.QueryRow(
 		`UPDATE clothes
-		SET (color, brand, sex, link, price, currency) = ($2, $3, $4, $5, $6, $7)
+		SET (type, name, description, color, brand, sex, link, price, currency) = ($2, $3, $4, $5, $6, $7, $8, $9, $10)
 		WHERE id = $1
 		RETURNING
 			id,
 			type,
+			name,
+			description,
 			color,
 			img,
 			mask,
@@ -107,6 +113,9 @@ func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesDat
 			owner_id,
 			created_at;`,
 		newClothesData.ID,
+		newClothesData.Type,
+		newClothesData.Name,
+		newClothesData.Desc,
 		newClothesData.Color,
 		newClothesData.Brand,
 		newClothesData.Sex,
@@ -116,6 +125,8 @@ func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesDat
 	).Scan(
 		&updatedClothes.ID,
 		&updatedClothes.Type,
+		&updatedClothes.Name,
+		&updatedClothes.Desc,
 		&updatedClothes.Color,
 		&updatedClothes.ImgPath,
 		&updatedClothes.MaskPath,
@@ -251,6 +262,8 @@ func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset
 	query := `SELECT
 		id,
 		type,
+		name,
+		description,
 		color,
 		img,
 		mask,
@@ -282,6 +295,8 @@ func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset
 		err := rows.Scan(
 			&row.ID,
 			&row.Type,
+			&row.Name,
+			&row.Desc,
 			&row.Color,
 			&row.ImgPath,
 			&row.MaskPath,
@@ -309,6 +324,8 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 	query := `SELECT
 		id,
 		type,
+		name,
+		description,
 		color,
 		img,
 		mask,
@@ -340,6 +357,8 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 		err := rows.Scan(
 			&row.ID,
 			&row.Type,
+			&row.Name,
+			&row.Desc,
 			&row.Color,
 			&row.ImgPath,
 			&row.MaskPath,
@@ -369,6 +388,8 @@ func (pr *postgresqlRepository) GetClothesByID(ctx context.Context, cid uint64) 
 		`SELECT
 			id,
 			type,
+			name,
+			description,
 			color,
 			img,
 			mask,
@@ -385,6 +406,8 @@ func (pr *postgresqlRepository) GetClothesByID(ctx context.Context, cid uint64) 
 	).Scan(
 		&clothes.ID,
 		&clothes.Type,
+		&clothes.Name,
+		&clothes.Desc,
 		&clothes.Color,
 		&clothes.ImgPath,
 		&clothes.MaskPath,

@@ -38,6 +38,10 @@ func easyjson31a459deDecodeDrssrInternalModels(in *jlexer.Lexer, out *Clothes) {
 		switch key {
 		case "id":
 			out.ID = uint64(in.Uint64())
+		case "name":
+			out.Name = string(in.String())
+		case "description":
+			out.Desc = string(in.String())
 		case "type":
 			out.Type = string(in.String())
 		case "color":
@@ -80,6 +84,16 @@ func easyjson31a459deEncodeDrssrInternalModels(out *jwriter.Writer, in Clothes) 
 		const prefix string = ",\"id\":"
 		out.RawString(prefix[1:])
 		out.Uint64(uint64(in.ID))
+	}
+	{
+		const prefix string = ",\"name\":"
+		out.RawString(prefix)
+		out.String(string(in.Name))
+	}
+	{
+		const prefix string = ",\"description\":"
+		out.RawString(prefix)
+		out.String(string(in.Desc))
 	}
 	{
 		const prefix string = ",\"type\":"

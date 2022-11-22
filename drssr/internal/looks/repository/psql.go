@@ -59,21 +59,24 @@ func NewPostgresqlRepository(cfg config.PostgresConfig, logger logrus.Logger) IP
 func (pr *postgresqlRepository) AddLook(ctx context.Context, look models.Look) (models.Look, error) {
 	var createdLook models.Look
 	err := pr.conn.QueryRow(
-		`INSERT INTO looks (img, description, creator_id)
-		VALUES ($1, $2, $3)
+		`INSERT INTO looks (img, name, description, creator_id)
+		VALUES ($1, $2, $3, $4)
 		RETURNING
 			id,
 			img,
+			name,
 			description,
 			creator_id,
 			created_at;`,
 		look.ImgPath,
-		look.Description,
+		look.Name,
+		look.Desc,
 		look.CreatorID,
 	).Scan(
 		&createdLook.ID,
 		&createdLook.ImgPath,
-		&createdLook.Description,
+		&createdLook.Name,
+		&createdLook.Desc,
 		&createdLook.CreatorID,
 		&createdLook.Ctime,
 	)
@@ -91,6 +94,7 @@ func (pr *postgresqlRepository) DeleteLook(ctx context.Context, lid uint64) (mod
 		RETURNING
 			id,
 			img,
+			name,
 			description,
 			creator_id,
 			created_at;`,
@@ -98,7 +102,8 @@ func (pr *postgresqlRepository) DeleteLook(ctx context.Context, lid uint64) (mod
 	).Scan(
 		&deletedLook.ID,
 		&deletedLook.ImgPath,
-		&deletedLook.Description,
+		&deletedLook.Name,
+		&deletedLook.Desc,
 		&deletedLook.CreatorID,
 		&deletedLook.Ctime,
 	)
@@ -161,12 +166,13 @@ func (pr *postgresqlRepository) DeleteLookClothesBind(ctx context.Context, bid u
 func (pr *postgresqlRepository) GetLookByID(ctx context.Context, lid uint64) (models.Look, error) {
 	var look models.Look
 	err := pr.conn.QueryRow(
-		`SELECT id, img, description, creator_id, created_at FROM looks WHERE id = $1;`,
+		`SELECT id, img, name, description, creator_id, created_at FROM looks WHERE id = $1;`,
 		lid,
 	).Scan(
 		&look.ID,
 		&look.ImgPath,
-		&look.Description,
+		&look.Name,
+		&look.Desc,
 		&look.CreatorID,
 		&look.Ctime,
 	)
@@ -185,16 +191,18 @@ func (pr *postgresqlRepository) UpdateLookByID(
 	var updatedLook models.Look
 	err := pr.conn.QueryRow(
 		`UPDATE looks
-		SET (img, description) = ($2, $3)
+		SET (img, name, description) = ($2, $3, $4)
 		WHERE id = $1
-		RETURNING id, img, description, creator_id, created_at;`,
+		RETURNING id, img, name, description, creator_id, created_at;`,
 		lid,
 		newLook.ImgPath,
-		newLook.Description,
+		newLook.Name,
+		newLook.Desc,
 	).Scan(
 		&updatedLook.ID,
 		&updatedLook.ImgPath,
-		&updatedLook.Description,
+		&updatedLook.Name,
+		&updatedLook.Desc,
 		&updatedLook.CreatorID,
 		&updatedLook.Ctime,
 	)
@@ -211,7 +219,7 @@ func (pr *postgresqlRepository) GetLookClothes(
 ) ([]models.ClothesStruct, error) {
 	rows, err := pr.conn.Query(
 		`SELECT
-			c.id, c.type, c.brand, c.img, c.mask, cl.x, cl.y
+			c.id, c.type, c.name, c.description, c.brand, c.img, c.mask, cl.x, cl.y
 		FROM clothes_looks cl
 		JOIN clothes c ON c.id = cl.clothes_id
 		WHERE look_id = $1;`,
@@ -225,12 +233,12 @@ func (pr *postgresqlRepository) GetLookClothes(
 	var respList []models.ClothesStruct
 	var row models.ClothesStruct
 	for rows.Next() {
-		var clothesType string
-		var clothesBrand string
 		err := rows.Scan(
 			&row.ID,
-			&clothesType,
-			&clothesBrand,
+			&row.Type,
+			&row.Name,
+			&row.Desc,
+			&row.Brand,
 			&row.ImgPath,
 			&row.MaskPath,
 			&row.Coords.X,
@@ -239,7 +247,6 @@ func (pr *postgresqlRepository) GetLookClothes(
 		if err != nil {
 			return []models.ClothesStruct{}, err
 		}
-		row.Label = fmt.Sprintf("%s %s", clothesType, clothesBrand)
 		respList = append(respList, row)
 	}
 	if err := rows.Err(); err != nil {
@@ -286,10 +293,11 @@ func (pr *postgresqlRepository) GetUserLooks(ctx context.Context, limit, offset 
 	query := `SELECT
 		id,
 		img,
+		name,
 		description,
 		creator_id,
 		created_at
-	FROM looks WHERE creator_id = $1;`
+	FROM looks WHERE creator_id = $1`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -310,7 +318,8 @@ func (pr *postgresqlRepository) GetUserLooks(ctx context.Context, limit, offset 
 		err := rows.Scan(
 			&row.ID,
 			&row.ImgPath,
-			&row.Description,
+			&row.Name,
+			&row.Desc,
 			&row.CreatorID,
 			&row.Ctime,
 		)
@@ -330,10 +339,11 @@ func (pr *postgresqlRepository) GetAllLooks(ctx context.Context, limit, offset i
 	query := `SELECT
 		id,
 		img,
+		name,
 		description,
 		creator_id,
 		created_at
-	FROM looks;`
+	FROM looks`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -354,7 +364,8 @@ func (pr *postgresqlRepository) GetAllLooks(ctx context.Context, limit, offset i
 		err := rows.Scan(
 			&row.ID,
 			&row.ImgPath,
-			&row.Description,
+			&row.Name,
+			&row.Desc,
 			&row.CreatorID,
 			&row.Ctime,
 		)

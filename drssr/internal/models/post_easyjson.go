@@ -40,8 +40,10 @@ func easyjson5a72dc82DecodeDrssrInternalModels(in *jlexer.Lexer, out *Post) {
 			out.ID = uint64(in.Uint64())
 		case "type":
 			out.Type = PostType(in.String())
+		case "name":
+			out.Name = string(in.String())
 		case "description":
-			out.Description = string(in.String())
+			out.Desc = string(in.String())
 		case "creator_id":
 			out.CreatorID = uint64(in.Uint64())
 		case "element_id":
@@ -123,9 +125,14 @@ func easyjson5a72dc82EncodeDrssrInternalModels(out *jwriter.Writer, in Post) {
 		out.String(string(in.Type))
 	}
 	{
+		const prefix string = ",\"name\":"
+		out.RawString(prefix)
+		out.String(string(in.Name))
+	}
+	{
 		const prefix string = ",\"description\":"
 		out.RawString(prefix)
-		out.String(string(in.Description))
+		out.String(string(in.Desc))
 	}
 	{
 		const prefix string = ",\"creator_id\":"

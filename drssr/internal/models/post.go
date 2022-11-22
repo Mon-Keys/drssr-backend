@@ -13,7 +13,8 @@ const (
 type Post struct {
 	ID            uint64    `json:"id" db:"id"`
 	Type          PostType  `json:"type" db:"type"`
-	Description   string    `json:"description" db:"description"`
+	Name          string    `json:"name" db:"name"`
+	Desc          string    `json:"description" db:"description"`
 	CreatorID     uint64    `json:"creator_id" db:"creator_id"`
 	ElementID     uint64    `json:"element_id" db:"element_id"`
 	Clothes       Clothes   `json:"clothes,omitempty" db:"-"`

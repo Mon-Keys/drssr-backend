@@ -127,7 +127,10 @@ func (lu *looksUsecase) AddLook(
 
 		createdLook.Clothes = append(createdLook.Clothes, models.ClothesStruct{
 			ID:       clothes.ID,
-			Label:    fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
+			Type:     clothedFromDB.Type,
+			Name:     clothedFromDB.Name,
+			Desc:     clothedFromDB.Desc,
+			Brand:    clothedFromDB.Brand,
 			Coords:   createdBind.Coords,
 			ImgPath:  clothedFromDB.ImgPath,
 			MaskPath: clothedFromDB.MaskPath,
@@ -265,7 +268,10 @@ func (lu *looksUsecase) UpdateLook(
 
 		updatedLook.Clothes = append(updatedLook.Clothes, models.ClothesStruct{
 			ID:       clothes.ID,
-			Label:    fmt.Sprintf("%s %s", clothedFromDB.Type, clothedFromDB.Brand),
+			Type:     clothedFromDB.Type,
+			Name:     clothedFromDB.Name,
+			Desc:     clothedFromDB.Desc,
+			Brand:    clothedFromDB.Brand,
 			Coords:   createdBind.Coords,
 			ImgPath:  clothedFromDB.ImgPath,
 			MaskPath: clothedFromDB.MaskPath,

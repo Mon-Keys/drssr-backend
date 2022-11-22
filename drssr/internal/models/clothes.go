@@ -11,6 +11,8 @@ const (
 //easyjson:json
 type Clothes struct {
 	ID       uint64       `json:"id" db:"id"`
+	Name     string       `json:"name" db:"name"`
+	Desc     string       `json:"description" db:"description"`
 	Type     string       `json:"type" db:"type"`
 	Color    string       `json:"color,omitempty" db:"color"`
 	ImgPath  string       `json:"img_path" db:"img"`

@@ -38,8 +38,10 @@ func easyjson9db9635DecodeDrssrInternalModels(in *jlexer.Lexer, out *Look) {
 		switch key {
 		case "id":
 			out.ID = uint64(in.Uint64())
+		case "name":
+			out.Name = string(in.String())
 		case "description":
-			out.Description = string(in.String())
+			out.Desc = string(in.String())
 		case "creator_id":
 			out.CreatorID = uint64(in.Uint64())
 		case "clothes":
@@ -89,9 +91,14 @@ func easyjson9db9635EncodeDrssrInternalModels(out *jwriter.Writer, in Look) {
 		out.Uint64(uint64(in.ID))
 	}
 	{
+		const prefix string = ",\"name\":"
+		out.RawString(prefix)
+		out.String(string(in.Name))
+	}
+	{
 		const prefix string = ",\"description\":"
 		out.RawString(prefix)
-		out.String(string(in.Description))
+		out.String(string(in.Desc))
 	}
 	{
 		const prefix string = ",\"creator_id\":"
@@ -244,8 +251,14 @@ func easyjson9db9635DecodeDrssrInternalModels2(in *jlexer.Lexer, out *ClothesStr
 		switch key {
 		case "id":
 			out.ID = uint64(in.Uint64())
-		case "label":
-			out.Label = string(in.String())
+		case "name":
+			out.Name = string(in.String())
+		case "description":
+			out.Desc = string(in.String())
+		case "type":
+			out.Type = string(in.String())
+		case "brand":
+			out.Brand = string(in.String())
 		case "coords":
 			(out.Coords).UnmarshalEasyJSON(in)
 		case "img_path":
@@ -272,9 +285,24 @@ func easyjson9db9635EncodeDrssrInternalModels2(out *jwriter.Writer, in ClothesSt
 		out.Uint64(uint64(in.ID))
 	}
 	{
-		const prefix string = ",\"label\":"
+		const prefix string = ",\"name\":"
 		out.RawString(prefix)
-		out.String(string(in.Label))
+		out.String(string(in.Name))
+	}
+	{
+		const prefix string = ",\"description\":"
+		out.RawString(prefix)
+		out.String(string(in.Desc))
+	}
+	{
+		const prefix string = ",\"type\":"
+		out.RawString(prefix)
+		out.String(string(in.Type))
+	}
+	{
+		const prefix string = ",\"brand\":"
+		out.RawString(prefix)
+		out.String(string(in.Brand))
 	}
 	{
 		const prefix string = ",\"coords\":"

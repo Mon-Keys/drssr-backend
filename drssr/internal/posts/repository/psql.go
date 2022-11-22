@@ -60,25 +60,28 @@ func NewPostgresqlRepository(cfg config.PostgresConfig, logger logrus.Logger) IP
 func (pr *postgresqlRepository) AddPost(ctx context.Context, post models.Post) (models.Post, error) {
 	var createdPost models.Post
 	err := pr.conn.QueryRow(
-		`INSERT INTO posts (type, description, element_id, creator_id, previews_paths)
-		VALUES ($1, $2, $3, $4, $5)
+		`INSERT INTO posts (type, name, description, element_id, creator_id, previews_paths)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING
 			id,
 			type,
+			name,
 			description,
 			element_id,
 			creator_id,
 			previews_paths,
 			created_at;`,
 		post.Type,
-		post.Description,
+		post.Name,
+		post.Desc,
 		post.ElementID,
 		post.CreatorID,
 		post.PreviewsPaths,
 	).Scan(
 		&createdPost.ID,
 		&createdPost.Type,
-		&createdPost.Description,
+		&createdPost.Name,
+		&createdPost.Desc,
 		&createdPost.ElementID,
 		&createdPost.CreatorID,
 		&createdPost.PreviewsPaths,
@@ -98,6 +101,7 @@ func (pr *postgresqlRepository) DeletePost(ctx context.Context, pid uint64) (mod
 		RETURNING
 			id,
 			type,
+			name,
 			description,
 			element_id,
 			creator_id,
@@ -107,7 +111,8 @@ func (pr *postgresqlRepository) DeletePost(ctx context.Context, pid uint64) (mod
 	).Scan(
 		&deletedPost.ID,
 		&deletedPost.Type,
-		&deletedPost.Description,
+		&deletedPost.Name,
+		&deletedPost.Desc,
 		&deletedPost.ElementID,
 		&deletedPost.CreatorID,
 		&deletedPost.PreviewsPaths,
@@ -127,12 +132,13 @@ func (pr *postgresqlRepository) DeletePost(ctx context.Context, pid uint64) (mod
 func (pr *postgresqlRepository) GetPostByID(ctx context.Context, pid uint64) (models.Post, error) {
 	var post models.Post
 	err := pr.conn.QueryRow(
-		`SELECT id, type, description, element_id, creator_id, previews_paths, created_at FROM posts WHERE id = $1;`,
+		`SELECT id, type, name, description, element_id, creator_id, previews_paths, created_at FROM posts WHERE id = $1;`,
 		pid,
 	).Scan(
 		&post.ID,
 		&post.Type,
-		&post.Description,
+		&post.Name,
+		&post.Desc,
 		&post.ElementID,
 		&post.CreatorID,
 		&post.PreviewsPaths,
@@ -149,12 +155,13 @@ func (pr *postgresqlRepository) GetUserPosts(ctx context.Context, limit, offset 
 	query := `SELECT
 		id,
 		type,
+		name,
 		description,
 		element_id,
 		creator_id,
 		previews_paths,
 		created_at
-	FROM posts WHERE creator_id = $1;`
+	FROM posts WHERE creator_id = $1`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -175,7 +182,8 @@ func (pr *postgresqlRepository) GetUserPosts(ctx context.Context, limit, offset 
 		err := rows.Scan(
 			&row.ID,
 			&row.Type,
-			&row.Description,
+			&row.Name,
+			&row.Desc,
 			&row.ElementID,
 			&row.CreatorID,
 			&row.PreviewsPaths,
@@ -197,12 +205,13 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 	query := `SELECT
 		id,
 		type,
+		name,
 		description,
 		element_id,
 		creator_id,
 		previews_paths,
 		created_at
-	FROM posts;`
+	FROM posts`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -223,7 +232,8 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 		err := rows.Scan(
 			&row.ID,
 			&row.Type,
-			&row.Description,
+			&row.Name,
+			&row.Desc,
 			&row.ElementID,
 			&row.CreatorID,
 			&row.PreviewsPaths,
@@ -245,6 +255,7 @@ func (pr *postgresqlRepository) GetLikedPosts(ctx context.Context, uid uint64, l
 	query := `SELECT
 		p.id,
 		p.type,
+		p.name,
 		p.description,
 		p.element_id,
 		p.creator_id,
@@ -252,7 +263,7 @@ func (pr *postgresqlRepository) GetLikedPosts(ctx context.Context, uid uint64, l
 		p.created_at
 	FROM posts p
 	JOIN likes l ON l.post_id = p.id
-	WHERE l.user_id = $1;`
+	WHERE l.user_id = $1`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -273,7 +284,8 @@ func (pr *postgresqlRepository) GetLikedPosts(ctx context.Context, uid uint64, l
 		err := rows.Scan(
 			&row.ID,
 			&row.Type,
-			&row.Description,
+			&row.Name,
+			&row.Desc,
 			&row.ElementID,
 			&row.CreatorID,
 			&row.PreviewsPaths,

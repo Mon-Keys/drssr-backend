@@ -21,7 +21,7 @@ type Post struct {
 	Look          Look      `json:"look,omitempty" db:"-"`
 	Previews      []string  `json:"previews" db:"-"`
 	PreviewsPaths []string  `json:"previews_paths" db:"previews_paths"`
-	Likes         int       `json:"likes" db:"-"`
+	Likes         int       `json:"likes" db:"likes"`
 	Ctime         time.Time `json:"-" db:"created_at"`
 }
 

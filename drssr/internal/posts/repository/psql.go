@@ -18,6 +18,7 @@ type IPostgresqlRepository interface {
 	GetUserPosts(ctx context.Context, limit, offset int, uid uint64) ([]models.Post, error)
 	GetLikedPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error)
 	GetAllPosts(ctx context.Context, limit, offset int) ([]models.Post, error)
+	GetAllMostLikedPosts(ctx context.Context, limit, offset int) ([]models.Post, error)
 
 	GetPostLikes(ctx context.Context, pid uint64) (int, error)
 	LikePost(ctx context.Context, uid, pid uint64) error
@@ -238,6 +239,59 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 			&row.CreatorID,
 			&row.PreviewsPaths,
 			&row.Ctime,
+		)
+		if err != nil {
+			return []models.Post{}, err
+		}
+		respList = append(respList, row)
+	}
+	if err := rows.Err(); err != nil {
+		return []models.Post{}, err
+	}
+
+	return respList, nil
+}
+
+func (pr *postgresqlRepository) GetAllMostLikedPosts(ctx context.Context, limit, offset int) ([]models.Post, error) {
+	query := `SELECT
+		p.id,
+		p.type,
+		p.name,
+		p.description,
+		p.element_id,
+		p.creator_id,
+		p.previews_paths,
+		p.created_at,
+		(SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) likes
+	FROM posts p
+	ORDER BY likes DESC`
+	var l string
+	if limit > 0 {
+		l = fmt.Sprintf(" LIMIT %d", limit)
+	}
+	var o string
+	if offset > 0 {
+		o = fmt.Sprintf(" OFFSET %d", offset)
+	}
+	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o))
+	if err != nil {
+		return []models.Post{}, err
+	}
+	defer rows.Close()
+
+	var respList []models.Post
+	var row models.Post
+	for rows.Next() {
+		err := rows.Scan(
+			&row.ID,
+			&row.Type,
+			&row.Name,
+			&row.Desc,
+			&row.ElementID,
+			&row.CreatorID,
+			&row.PreviewsPaths,
+			&row.Ctime,
+			&row.Likes,
 		)
 		if err != nil {
 			return []models.Post{}, err

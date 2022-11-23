@@ -28,6 +28,7 @@ type IPostUsecase interface {
 	GetUserPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
 	GetLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
 	GetAllPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error)
+	GetAllMostLikedPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error)
 
 	LikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
 	UnlikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
@@ -367,6 +368,26 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 		posts[i].Likes, err = pu.psql.GetPostLikes(ctx, posts[i].ID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get post's likes: %w", err)
+		}
+	}
+
+	return posts, http.StatusOK, nil
+}
+
+func (pu *postsUsecase) GetAllMostLikedPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error) {
+	posts, err := pu.psql.GetAllMostLikedPosts(ctx, limit, offset)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetAllPosts: not found any posts")
+		}
+		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get user posts from db: %w", err)
+	}
+
+	for i := range posts {
+		var status int
+		posts[i], status, err = pu.generateElement(ctx, posts[i])
+		if err != nil || status != http.StatusOK {
+			return nil, status, fmt.Errorf("PostsUsecase.GetAllPosts: failed to generate post's element: %w", err)
 		}
 	}
 

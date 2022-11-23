@@ -47,6 +47,7 @@ func SetPostsRouting(
 
 	looksPublicAPI.HandleFunc("", postsDelivery.getPost).Methods(http.MethodGet)
 	looksPublicAPI.HandleFunc("/all", postsDelivery.getAllPosts).Methods(http.MethodGet)
+	looksPublicAPI.HandleFunc("/discover", postsDelivery.getAllMostLikedPosts).Methods(http.MethodGet)
 }
 
 func (pd *PostsDelivery) addPost(w http.ResponseWriter, r *http.Request) {
@@ -406,6 +407,50 @@ func (pd *PostsDelivery) getAllPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	posts, status, err := pd.postsUseCase.GetAllPosts(ctx, limitInt, offsetInt)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get posts: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, posts)
+}
+
+func (pd *PostsDelivery) getAllMostLikedPosts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := pd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+
+	queryParams := r.URL.Query()
+
+	var err error
+
+	limitStr := queryParams.Get("limit")
+	limitInt := 0
+	if limitStr != "" {
+		limitInt, err = strconv.Atoi(limitStr)
+		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	offsetStr := queryParams.Get("offset")
+	offsetInt := 0
+	if offsetStr != "" {
+		offsetInt, err = strconv.Atoi(offsetStr)
+		if err != nil || offsetInt < 0 {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	posts, status, err := pd.postsUseCase.GetAllMostLikedPosts(ctx, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to get posts: %w", err)
 		ioutils.SendDefaultError(w, status)

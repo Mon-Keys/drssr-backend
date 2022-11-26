@@ -18,6 +18,7 @@ type IPostgresqlRepository interface {
 	AddUser(ctx context.Context, user models.SignupCredentials) (models.User, error)
 	UpdateUser(ctx context.Context, user models.UpdateUserReq) (models.User, error)
 	DeleteUser(ctx context.Context, uid uint64) error
+	UpdateAvatar(ctx context.Context, uid uint64, newAvatar string) (models.User, error)
 
 	CheckStatus(ctx context.Context) (int, error)
 
@@ -276,7 +277,7 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 	var updatedUser models.User
 	err := pr.conn.QueryRow(
 		`UPDATE users
-		SET (nickname, name, avatar, birth_date, description) = ($2, $3, $4, $5, $6)
+		SET (nickname, name, birth_date, description) = ($2, $3, $4, $5, $6)
 		WHERE email = $1
 		RETURNING
 			id,
@@ -292,7 +293,6 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 		newUserData.Email,
 		newUserData.Nickname,
 		newUserData.Name,
-		newUserData.Avatar,
 		newUserData.BirthDate,
 		newUserData.Desc,
 	).Scan(
@@ -352,6 +352,44 @@ func (pr *postgresqlRepository) BecomeStylist(ctx context.Context, uid uint64) (
 			description,
 			created_at;`,
 		uid,
+	).Scan(
+		&updatedUser.ID,
+		&updatedUser.Nickname,
+		&updatedUser.Email,
+		&updatedUser.Password,
+		&updatedUser.Name,
+		&updatedUser.Avatar,
+		&updatedUser.Stylist,
+		&updatedUser.Age,
+		&updatedUser.Desc,
+		&updatedUser.Ctime,
+	)
+
+	if err != nil {
+		return models.User{}, err
+	}
+	return updatedUser, nil
+}
+
+func (pr *postgresqlRepository) UpdateAvatar(ctx context.Context, uid uint64, newAvatar string) (models.User, error) {
+	var updatedUser models.User
+	err := pr.conn.QueryRow(
+		`UPDATE users
+		SET avatar = $2
+		WHERE id = $1
+		RETURNING
+			id,
+			nickname,
+			email,
+			password,
+			name,
+			avatar,
+			stylist,
+			date_part('year', age(birth_date)) as age,
+			description,
+			created_at;`,
+		uid,
+		newAvatar,
 	).Scan(
 		&updatedUser.ID,
 		&updatedUser.Nickname,

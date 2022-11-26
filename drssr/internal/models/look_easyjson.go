@@ -180,6 +180,8 @@ func easyjson9db9635DecodeDrssrInternalModels1(in *jlexer.Lexer, out *CoordsStru
 			out.X = int(in.Int())
 		case "y":
 			out.Y = int(in.Int())
+		case "z":
+			out.Z = int(in.Int())
 		default:
 			in.SkipRecursive()
 		}
@@ -203,6 +205,11 @@ func easyjson9db9635EncodeDrssrInternalModels1(out *jwriter.Writer, in CoordsStr
 		const prefix string = ",\"y\":"
 		out.RawString(prefix)
 		out.Int(int(in.Y))
+	}
+	{
+		const prefix string = ",\"z\":"
+		out.RawString(prefix)
+		out.Int(int(in.Z))
 	}
 	out.RawByte('}')
 }
@@ -261,6 +268,10 @@ func easyjson9db9635DecodeDrssrInternalModels2(in *jlexer.Lexer, out *ClothesStr
 			out.Brand = string(in.String())
 		case "coords":
 			(out.Coords).UnmarshalEasyJSON(in)
+		case "rotation":
+			out.Rotation = int(in.Int())
+		case "scaling":
+			out.Scaling = int(in.Int())
 		case "img_path":
 			out.ImgPath = string(in.String())
 		case "mask_path":
@@ -308,6 +319,16 @@ func easyjson9db9635EncodeDrssrInternalModels2(out *jwriter.Writer, in ClothesSt
 		const prefix string = ",\"coords\":"
 		out.RawString(prefix)
 		(in.Coords).MarshalEasyJSON(out)
+	}
+	{
+		const prefix string = ",\"rotation\":"
+		out.RawString(prefix)
+		out.Int(int(in.Rotation))
+	}
+	{
+		const prefix string = ",\"scaling\":"
+		out.RawString(prefix)
+		out.Int(int(in.Scaling))
 	}
 	{
 		const prefix string = ",\"img_path\":"

@@ -125,17 +125,23 @@ func (pr *postgresqlRepository) AddLookClothesBind(
 ) (models.ClothesStruct, error) {
 	var createdBind models.ClothesStruct
 	err := pr.conn.QueryRow(
-		`INSERT INTO clothes_looks (clothes_id, look_id, x, y)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, x, y;`,
+		`INSERT INTO clothes_looks (clothes_id, look_id, x, y, z, rotation, scaling)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, x, y, z, rotation, scaling;`,
 		clothes.ID,
 		lid,
 		clothes.Coords.X,
 		clothes.Coords.Y,
+		clothes.Coords.Z,
+		clothes.Rotation,
+		clothes.Scaling,
 	).Scan(
 		&createdBind.ID,
 		&createdBind.Coords.X,
 		&createdBind.Coords.Y,
+		&createdBind.Coords.Z,
+		&createdBind.Rotation,
+		&createdBind.Scaling,
 	)
 
 	if err != nil {
@@ -219,7 +225,18 @@ func (pr *postgresqlRepository) GetLookClothes(
 ) ([]models.ClothesStruct, error) {
 	rows, err := pr.conn.Query(
 		`SELECT
-			c.id, c.type, c.name, c.description, c.brand, c.img, c.mask, cl.x, cl.y
+			c.id,
+			c.type,
+			c.name,
+			c.description,
+			c.brand,
+			c.img,
+			c.mask,
+			cl.x,
+			cl.y,
+			cl.z,
+			cl.rotation,
+			cl.scaling 
 		FROM clothes_looks cl
 		JOIN clothes c ON c.id = cl.clothes_id
 		WHERE look_id = $1;`,
@@ -243,6 +260,9 @@ func (pr *postgresqlRepository) GetLookClothes(
 			&row.MaskPath,
 			&row.Coords.X,
 			&row.Coords.Y,
+			&row.Coords.Z,
+			&row.Rotation,
+			&row.Scaling,
 		)
 		if err != nil {
 			return []models.ClothesStruct{}, err
@@ -261,7 +281,7 @@ func (pr *postgresqlRepository) DeleteLookClothesBindsByID(
 	lid uint64,
 ) ([]models.ClothesStruct, error) {
 	rows, err := pr.conn.Query(
-		`DELETE FROM clothes_looks WHERE look_id = $1 RETURNING look_id, x, y;`,
+		`DELETE FROM clothes_looks WHERE look_id = $1 RETURNING look_id, x, y, z, rotation, scaling;`,
 		lid,
 	)
 	if err != nil {
@@ -276,6 +296,9 @@ func (pr *postgresqlRepository) DeleteLookClothesBindsByID(
 			&row.ID,
 			&row.Coords.X,
 			&row.Coords.Y,
+			&row.Coords.Z,
+			&row.Rotation,
+			&row.Scaling,
 		)
 		if err != nil {
 			return []models.ClothesStruct{}, err

@@ -132,6 +132,8 @@ func (lu *looksUsecase) AddLook(
 			Desc:     clothedFromDB.Desc,
 			Brand:    clothedFromDB.Brand,
 			Coords:   createdBind.Coords,
+			Rotation: createdBind.Rotation,
+			Scaling:  createdBind.Scaling,
 			ImgPath:  clothedFromDB.ImgPath,
 			MaskPath: clothedFromDB.MaskPath,
 		})
@@ -273,6 +275,8 @@ func (lu *looksUsecase) UpdateLook(
 			Desc:     clothedFromDB.Desc,
 			Brand:    clothedFromDB.Brand,
 			Coords:   createdBind.Coords,
+			Rotation: createdBind.Rotation,
+			Scaling:  createdBind.Scaling,
 			ImgPath:  clothedFromDB.ImgPath,
 			MaskPath: clothedFromDB.MaskPath,
 		})

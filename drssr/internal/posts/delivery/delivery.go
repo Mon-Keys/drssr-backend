@@ -452,7 +452,7 @@ func (pd *PostsDelivery) getAllMostLikedPosts(w http.ResponseWriter, r *http.Req
 
 	posts, status, err := pd.postsUseCase.GetAllMostLikedPosts(ctx, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to get posts: %w", err)
+		logger.WithField("status", status).Errorf("Failed to get most liked posts: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}

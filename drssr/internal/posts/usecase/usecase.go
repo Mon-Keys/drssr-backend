@@ -378,16 +378,16 @@ func (pu *postsUsecase) GetAllMostLikedPosts(ctx context.Context, limit int, off
 	posts, err := pu.psql.GetAllMostLikedPosts(ctx, limit, offset)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetAllPosts: not found any posts")
+			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetAllMostLikedPosts: not found any posts")
 		}
-		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get user posts from db: %w", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllMostLikedPosts: failed to get posts from db: %w", err)
 	}
 
 	for i := range posts {
 		var status int
 		posts[i], status, err = pu.generateElement(ctx, posts[i])
 		if err != nil || status != http.StatusOK {
-			return nil, status, fmt.Errorf("PostsUsecase.GetAllPosts: failed to generate post's element: %w", err)
+			return nil, status, fmt.Errorf("PostsUsecase.GetAllMostLikedPosts: failed to generate post's element: %w", err)
 		}
 	}
 

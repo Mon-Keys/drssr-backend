@@ -3,7 +3,9 @@ package delivery
 import (
 	"drssr/config"
 	"drssr/internal/models"
+	"drssr/internal/pkg/consts"
 	"drssr/internal/pkg/ctx_utils"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/ioutils"
 	middleware "drssr/internal/pkg/middlewares"
 	"drssr/internal/users/usecase"
@@ -48,6 +50,9 @@ func SetUserRouting(
 	userPrivateAPI.HandleFunc("", userDelivery.updateUser).Methods(http.MethodPut)
 	userPrivateAPI.HandleFunc("", userDelivery.deleteUser).Methods(http.MethodDelete)
 	userPrivateAPI.HandleFunc("/logout", userDelivery.logout).Methods(http.MethodDelete)
+
+	userPrivateAPI.HandleFunc("/avatar", userDelivery.updateAvatar).Methods(http.MethodPost)
+
 	userPrivateAPI.HandleFunc("/stylist", userDelivery.becomeStylist).Methods(http.MethodPost)
 
 	// TODO: move
@@ -57,9 +62,6 @@ func SetUserRouting(
 func (ud *UserDelivery) statusHandler(w http.ResponseWriter, r *http.Request) {
 	counter, _ := ud.userUseCase.CheckStatus(r.Context())
 
-	// ioutils.Send(w, http.StatusOK, models.StatusCheckStruct{
-	// 	UserTotal: counter,
-	// })
 	w.WriteHeader(http.StatusOK)
 	response := fmt.Sprintf("users_amount %d", counter)
 	w.Write([]byte(response))
@@ -318,6 +320,52 @@ func (ud *UserDelivery) logout(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, cookie)
 	ioutils.SendWithoutBody(w, status)
+}
+
+func (ud *UserDelivery) updateAvatar(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := ud.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	ud.logger = *ud.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	r.Body = http.MaxBytesReader(w, r.Body, consts.MaxUploadFileSize)
+	if err := r.ParseMultipartForm(consts.MaxUploadFileSize); err != nil {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse multipart/form-data request: %w", err)
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	file, fileHeader, status, err := file_utils.OpenFileFromReq(r, "file")
+	if err != nil {
+		logger.WithField("status", status).Errorf("Opening file error: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	updatedUser, status, err := ud.userUseCase.UpdateAvatar(ctx, usecase.UpdateAvatarArgs{
+		User:       *user,
+		FileHeader: fileHeader,
+		File:       *file,
+	})
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to add file: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, updatedUser)
 }
 
 func (ud *UserDelivery) becomeStylist(w http.ResponseWriter, r *http.Request) {

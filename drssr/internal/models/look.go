@@ -22,6 +22,8 @@ type ClothesStruct struct {
 	Type     string       `json:"type" db:"type"`
 	Brand    string       `json:"brand" db:"brand"`
 	Coords   CoordsStruct `json:"coords" db:"coords"`
+	Rotation int          `json:"rotation"`
+	Scaling  int          `json:"scaling"`
 	ImgPath  string       `json:"img_path" db:"img_path"`
 	MaskPath string       `json:"mask_path" db:"mask_path"`
 }
@@ -30,6 +32,7 @@ type ClothesStruct struct {
 type CoordsStruct struct {
 	X int `json:"x" db:"x"`
 	Y int `json:"y" db:"y"`
+	Z int `json:"z" db:"z"`
 }
 
 //easyjson:json

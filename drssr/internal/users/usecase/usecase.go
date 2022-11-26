@@ -2,12 +2,18 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha1"
 	"drssr/config"
 	"drssr/internal/models"
+	"drssr/internal/pkg/consts"
+	"drssr/internal/pkg/file_utils"
 	"drssr/internal/pkg/hasher"
 	"drssr/internal/pkg/rollback"
+	"encoding/hex"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx"
@@ -24,6 +30,7 @@ type IUserUsecase interface {
 	LogoutUser(ctx context.Context, email string) (int, error)
 	UpdateUser(ctx context.Context, newUserData models.UpdateUserReq) (models.User, int, error)
 	DeleteUser(ctx context.Context, user models.User, cookieValue string) (int, error)
+	UpdateAvatar(ctx context.Context, args UpdateAvatarArgs) (models.User, int, error)
 
 	CheckStatus(ctx context.Context) (int, error)
 
@@ -283,6 +290,89 @@ func (uu *userUsecase) BecomeStylist(ctx context.Context, uid uint64) (models.Us
 		return models.User{},
 			http.StatusInternalServerError,
 			fmt.Errorf("UserUsecase.BecomeStylist: failed to update user's stylist flag: %w", err)
+	}
+
+	return updatedUser, http.StatusOK, nil
+}
+
+type UpdateAvatarArgs struct {
+	User       models.User
+	FileHeader *multipart.FileHeader
+	File       multipart.File
+}
+
+// when uploading file
+func (uu *userUsecase) UpdateAvatar(
+	ctx context.Context,
+	args UpdateAvatarArgs,
+) (models.User, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	oldAvatar := args.User.Avatar
+
+	buf := make([]byte, args.FileHeader.Size)
+	_, err := args.File.Read(buf)
+	if err != nil {
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.UpdateAvatar: failed to read file: %w", err)
+	}
+
+	fileType := http.DetectContentType(buf)
+	if !file_utils.IsEnabledFileType(fileType) {
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.UpdateAvatar: not enabled file type")
+	}
+
+	folderNameByte := sha1.New().Sum([]byte(args.User.Email))
+	folderName := fmt.Sprintf(hex.EncodeToString(folderNameByte))
+
+	// saving avatar file
+	avatarFileName := file_utils.GenerateFileName("avatar", consts.FileExt)
+	avatarFolderPath := fmt.Sprintf("%s/%s", consts.AvatarsBaseFolderPath, folderName)
+	avatarFilePath := fmt.Sprintf("%s/%s/%s", consts.AvatarsBaseFolderPath, folderName, avatarFileName)
+
+	err = file_utils.SaveFile(avatarFolderPath, avatarFilePath, buf)
+	if err != nil {
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.UpdateAvatar: failed to save avatar's file: %w", err)
+	}
+
+	rb.Add(func() {
+		err := os.Remove(avatarFilePath)
+		if err != nil {
+			uu.logger.Errorf("UserUsecase.UpdateAvatar: failed to rollback creating of avatar's file: %w", err)
+		}
+	})
+
+	updatedUser, err := uu.psql.UpdateAvatar(ctx, args.User.ID, avatarFilePath)
+	if err != nil {
+		rb.Run()
+
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.UpdateAvatar: failed to update user's avatar in db: %w", err)
+	}
+
+	rb.Add(func() {
+		_, err := uu.psql.UpdateAvatar(ctx, args.User.ID, oldAvatar)
+		if err != nil {
+			uu.logger.Errorf("UserUsecase.UpdateAvatar: failed to rollback updating of user's avatar in db: %w", err)
+		}
+	})
+
+	// if user already have avatar deleting
+	if oldAvatar != "" {
+		err := os.Remove(oldAvatar)
+		if err != nil {
+			rb.Run()
+
+			return models.User{},
+				http.StatusInternalServerError,
+				fmt.Errorf("UserUsecase.UpdateAvatar: failed to delete old avatar's file: %w", err)
+		}
 	}
 
 	return updatedUser, http.StatusOK, nil

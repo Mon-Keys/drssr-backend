@@ -44,6 +44,7 @@ func main() {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Неизвестный запрос")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to send err msg: %w", err)
+					continue
 				}
 			}
 
@@ -53,6 +54,7 @@ func main() {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to parse send err msg: %w", err)
+					continue
 				}
 			}
 
@@ -62,6 +64,7 @@ func main() {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to parse send err msg: %w", err)
+					continue
 				}
 			}
 
@@ -71,6 +74,7 @@ func main() {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Такого запроса не существует")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to parse send err msg: %w", err)
+					continue
 				}
 			}
 
@@ -80,6 +84,7 @@ func main() {
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Такого пользователя не существует")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to send err msg: %w", err)
+					continue
 				}
 			}
 
@@ -91,6 +96,7 @@ func main() {
 					msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 					if _, err := bot.Send(msg); err != nil {
 						logger.Errorf("Failed to send err msg: %w", err)
+						continue
 					}
 				}
 
@@ -109,6 +115,7 @@ func main() {
 					msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 					if _, err := bot.Send(msg); err != nil {
 						logger.Errorf("Failed to send err msg: %w", err)
+						continue
 					}
 				}
 
@@ -127,12 +134,14 @@ func main() {
 					msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 					if _, err := bot.Send(msg); err != nil {
 						logger.Errorf("Failed to send err msg: %w", err)
+						continue
 					}
 				}
 
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(consts.StylistStatusAcceptOKMsg, user.Email))
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to send ok msg: %w", err)
+					continue
 				}
 			case consts.TGBotResponseReject:
 				_, err = ur.DeleteStylistRequestByID(ctx, reqID)
@@ -143,6 +152,7 @@ func main() {
 					msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 					if _, err := bot.Send(msg); err != nil {
 						logger.Errorf("Failed to send err msg: %w", err)
+						continue
 					}
 				}
 
@@ -161,17 +171,20 @@ func main() {
 					msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Ошибка")
 					if _, err := bot.Send(msg); err != nil {
 						logger.Errorf("Failed to send err msg: %w", err)
+						continue
 					}
 				}
 
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, fmt.Sprintf(consts.StylistStatusRejectOKMsg, user.Email))
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to send ok msg: %w", err)
+					continue
 				}
 			default:
 				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "Неизвестный запрос")
 				if _, err := bot.Send(msg); err != nil {
 					logger.Errorf("Failed to send err msg: %w", err)
+					continue
 				}
 			}
 		}

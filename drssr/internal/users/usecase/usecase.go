@@ -38,6 +38,7 @@ type IUserUsecase interface {
 	CheckStatus(ctx context.Context) (int, error)
 
 	BecomeStylist(ctx context.Context, user models.User) (int, error)
+	CheckStylistRequest(ctx context.Context, uid uint64) (models.StylistRequestStatusStruct, int, error)
 }
 
 type userUsecase struct {
@@ -459,4 +460,22 @@ func (uu *userUsecase) BecomeStylist(ctx context.Context, user models.User) (int
 	}
 
 	return http.StatusOK, nil
+}
+
+func (uu *userUsecase) CheckStylistRequest(ctx context.Context, uid uint64) (models.StylistRequestStatusStruct, int, error) {
+	ctx, _ = rollback.NewCtxRollback(ctx)
+
+	_, err := uu.psql.GetUserStylistRequestByUID(ctx, uid)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return models.StylistRequestStatusStruct{Exists: false}, http.StatusOK, nil
+		}
+		if err != pgx.ErrNoRows {
+			return models.StylistRequestStatusStruct{},
+				http.StatusInternalServerError,
+				fmt.Errorf("UserUsecase.BecomeStylist: failed to get stylist request from db: %w", err)
+		}
+	}
+
+	return models.StylistRequestStatusStruct{Exists: true}, http.StatusOK, nil
 }

@@ -55,3 +55,8 @@ type StylistRequest struct {
 	UID   uint64    `json:"uid" db:"user_id"`
 	Ctime time.Time `json:"-" db:"created_at"`
 }
+
+//easyjson:json
+type StylistRequestStatusStruct struct {
+	Exists bool `json:"exists" db:"-"`
+}

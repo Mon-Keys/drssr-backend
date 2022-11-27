@@ -31,7 +31,8 @@ similarity:
 
 tg_bot_stylist_accept:
   api_token: 5813757508:AAEAqeRBEU2P4G3Az_OV77hLguQrUoIqH0Y
-  admin_chat_id: -1001188162190
+  admin_chat_id: -847172576
+  email_notifications: false
 
 mailer:
   email: inagdimaev@mail.ru

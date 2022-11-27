@@ -40,8 +40,9 @@ type SimilarityConfig struct {
 }
 
 type TGBotConfig struct {
-	APIToken    string
-	AdminChatID int64
+	APIToken           string
+	AdminChatID        int64
+	EmailNotifications bool
 }
 
 type MailerConfig struct {
@@ -109,8 +110,9 @@ func SetConfig() {
 	}
 
 	TgBotAPIToken = TGBotConfig{
-		APIToken:    viper.GetString("tg_bot_stylist_accept.api_token"),
-		AdminChatID: viper.GetInt64("tg_bot_stylist_accept.admin_chat_id"),
+		APIToken:           viper.GetString("tg_bot_stylist_accept.api_token"),
+		AdminChatID:        viper.GetInt64("tg_bot_stylist_accept.admin_chat_id"),
+		EmailNotifications: viper.GetBool("tg_bot_stylist_accept.email_notifications"),
 	}
 
 	Mailer = MailerConfig{

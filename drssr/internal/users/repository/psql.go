@@ -235,8 +235,8 @@ func (pr *postgresqlRepository) GetUserByNickname(ctx context.Context, nickname 
 func (pr *postgresqlRepository) AddUser(ctx context.Context, user models.SignupCredentials) (models.User, error) {
 	var createdUser models.User
 	err := pr.conn.QueryRow(
-		`INSERT INTO users (nickname, email, password, name, birth_date, description)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO users (nickname, email, password, name, avatar, birth_date, description)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING
 			id,
 			nickname,
@@ -252,6 +252,7 @@ func (pr *postgresqlRepository) AddUser(ctx context.Context, user models.SignupC
 		user.Email,
 		user.Password,
 		user.Name,
+		user.Avatar,
 		user.BirthDate,
 		user.Desc,
 	).Scan(

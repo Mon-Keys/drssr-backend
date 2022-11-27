@@ -326,6 +326,8 @@ func easyjson9e1087fdDecodeDrssrInternalModels3(in *jlexer.Lexer, out *SignupCre
 			out.Password = string(in.String())
 		case "name":
 			out.Name = string(in.String())
+		case "avatar":
+			out.Avatar = string(in.String())
 		case "birth_date":
 			out.BirthDate = string(in.String())
 		case "description":
@@ -363,6 +365,11 @@ func easyjson9e1087fdEncodeDrssrInternalModels3(out *jwriter.Writer, in SignupCr
 		const prefix string = ",\"name\":"
 		out.RawString(prefix)
 		out.String(string(in.Name))
+	}
+	{
+		const prefix string = ",\"avatar\":"
+		out.RawString(prefix)
+		out.String(string(in.Avatar))
 	}
 	{
 		const prefix string = ",\"birth_date\":"

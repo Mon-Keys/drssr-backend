@@ -17,15 +17,24 @@ import (
 	"time"
 )
 
-func ReadFileIntoBase64(filePath string) (string, error) {
+func ReadFile(filePath string) ([]byte, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file")
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 
 	bytesImg, err := ioutil.ReadAll(f)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file")
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	return bytesImg, nil
+}
+
+func ReadFileIntoBase64(filePath string) (string, error) {
+	bytesImg, err := ReadFile(filePath)
+	if err != nil {
+		return "", err
 	}
 
 	decodedFile := base64.StdEncoding.EncodeToString(bytesImg)

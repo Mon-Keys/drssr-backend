@@ -9,6 +9,9 @@ const (
 	LooksBaseFolderPath   = "./media/looks"
 	PostsBaseFolderPath   = "./media/posts"
 	FileExt               = "webp"
+
+	DefaultsBaseFolderPath = "./media/defaults"
+	DefaultAvatarFileName  = "avatar.webp"
 )
 
 // clothes

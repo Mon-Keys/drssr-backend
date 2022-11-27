@@ -33,6 +33,7 @@ type SignupCredentials struct {
 	Email     string `json:"email" db:"email"`
 	Password  string `json:"password" db:"password"`
 	Name      string `json:"name,omitempty" db:"name"`
+	Avatar    string `json:"avatar" db:"avatar"`
 	BirthDate string `json:"birth_date" db:"birth_date"`
 	Desc      string `json:"description,omitempty" db:"description"`
 }

@@ -31,6 +31,7 @@ type IUserUsecase interface {
 	UpdateUser(ctx context.Context, newUserData models.UpdateUserReq) (models.User, int, error)
 	DeleteUser(ctx context.Context, user models.User, cookieValue string) (int, error)
 	UpdateAvatar(ctx context.Context, args UpdateAvatarArgs) (models.User, int, error)
+	DeleteAvatar(ctx context.Context, user models.User) (models.User, int, error)
 
 	CheckStatus(ctx context.Context) (int, error)
 
@@ -153,6 +154,7 @@ func (uu *userUsecase) SignupUser(
 			fmt.Errorf("UserUsecase.SignupUser: failed to hash password: %w", err)
 	}
 	credentials.Password = hashedPswd
+	credentials.Avatar = fmt.Sprintf("%s/%s", consts.AvatarsBaseFolderPath, consts.DefaultAvatarFileName)
 
 	// TODO: чтото с генерацией никнейма
 	// generate nickname if it's empty
@@ -301,7 +303,6 @@ type UpdateAvatarArgs struct {
 	File       multipart.File
 }
 
-// when uploading file
 func (uu *userUsecase) UpdateAvatar(
 	ctx context.Context,
 	args UpdateAvatarArgs,
@@ -372,6 +373,44 @@ func (uu *userUsecase) UpdateAvatar(
 			return models.User{},
 				http.StatusInternalServerError,
 				fmt.Errorf("UserUsecase.UpdateAvatar: failed to delete old avatar's file: %w", err)
+		}
+	}
+
+	return updatedUser, http.StatusOK, nil
+}
+
+func (uu *userUsecase) DeleteAvatar(ctx context.Context, user models.User) (models.User, int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	oldAvatar := user.Avatar
+
+	defaultAvatarFilePath := fmt.Sprintf("%s/%s", consts.DefaultsBaseFolderPath, consts.DefaultAvatarFileName)
+
+	updatedUser, err := uu.psql.UpdateAvatar(ctx, user.ID, defaultAvatarFilePath)
+	if err != nil {
+		rb.Run()
+
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.DeleteAvatar: failed to update user's avatar in db: %w", err)
+	}
+
+	rb.Add(func() {
+		_, err := uu.psql.UpdateAvatar(ctx, user.ID, oldAvatar)
+		if err != nil {
+			uu.logger.Errorf("UserUsecase.DeleteAvatar: failed to rollback updating of user's avatar in db: %w", err)
+		}
+	})
+
+	// deleting previous avatar
+	if oldAvatar != "" {
+		err := os.Remove(oldAvatar)
+		if err != nil {
+			rb.Run()
+
+			return models.User{},
+				http.StatusInternalServerError,
+				fmt.Errorf("UserUsecase.DeleteAvatar: failed to delete old avatar's file: %w", err)
 		}
 	}
 

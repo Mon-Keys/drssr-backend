@@ -39,6 +39,16 @@ type SimilarityConfig struct {
 	Timeout time.Duration
 }
 
+type TGBotConfig struct {
+	APIToken    string
+	AdminChatID int64
+}
+
+type MailerConfig struct {
+	Email    string
+	Password string
+}
+
 type TimeoutsConfig struct {
 	WriteTimeout   time.Duration
 	ReadTimeout    time.Duration
@@ -52,6 +62,8 @@ var (
 	Cutter                CutterConfig
 	Classifier            ClassifierConfig
 	Similarity            SimilarityConfig
+	TgBotAPIToken         TGBotConfig
+	Mailer                MailerConfig
 	WellSimilarityPercent int
 	ExpirationCookieTime  time.Duration
 	Timeouts              TimeoutsConfig
@@ -94,6 +106,16 @@ func SetConfig() {
 	Similarity = SimilarityConfig{
 		URL:     viper.GetString(`similarity.url`),
 		Timeout: viper.GetDuration(`similarity.timeout`),
+	}
+
+	TgBotAPIToken = TGBotConfig{
+		APIToken:    viper.GetString("tg_bot_stylist_accept.api_token"),
+		AdminChatID: viper.GetInt64("tg_bot_stylist_accept.admin_chat_id"),
+	}
+
+	Mailer = MailerConfig{
+		Email:    viper.GetString("mailer.email"),
+		Password: viper.GetString("mailer.password"),
 	}
 
 	WellSimilarityPercent = viper.GetInt("well_similarity_percent")

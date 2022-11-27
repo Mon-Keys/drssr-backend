@@ -1,8 +1,14 @@
-run:
-	go run cmd/main.go
+run-api:
+	go run cmd/api/main.go
 
-background_run:
-	nohup go run cmd/main.go > logs.log &
+run-bot:
+	go run cmd/tg_bot/main.go
+
+background_run-api:
+	nohup go run cmd/api/main.go > api_logs.log &
+
+background_run-bot:
+	nohup go run cmd/tg_bot/main.go > bot_logs.log &
 
 .PHONY: docker
 docker:

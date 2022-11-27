@@ -29,5 +29,13 @@ similarity:
   # url: 'http://host.docker.internal:5001'
   timeout: 10s
 
+tg_bot_stylist_accept:
+  api_token: 5813757508:AAEAqeRBEU2P4G3Az_OV77hLguQrUoIqH0Y
+  admin_chat_id: -1001188162190
+
+mailer:
+  email: inagdimaev@mail.ru
+  password: v6WYwwxm4F3Kh7h0DSPe
+
 well_similarity_percent: 50
 expiration_cookie_time": 1382400

@@ -23,6 +23,7 @@ import (
 	user_usecase "drssr/internal/users/usecase"
 	"net/http"
 
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -50,8 +51,14 @@ func main() {
 	// router
 	router := mux.NewRouter()
 
+	// tg bot
+	bot, err := tgbotapi.NewBotAPI(config.TgBotAPIToken.APIToken)
+	if err != nil {
+		logger.Fatalf("failed to init tg bot: %w", err)
+	}
+
 	// usecase
-	uu := user_usecase.NewUserUsecase(ur, rdr, *logger)
+	uu := user_usecase.NewUserUsecase(bot, ur, rdr, *logger)
 	cu := clothes_usecase.NewClothesUsecase(
 		cr,
 		*cutter.New(

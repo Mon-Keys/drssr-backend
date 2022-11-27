@@ -48,3 +48,10 @@ type LoginCredentials struct {
 type StatusCheckStruct struct {
 	UserTotal int `json:"user_total"`
 }
+
+//easyjson:json
+type StylistRequest struct {
+	ID    uint64    `json:"id" db:"id"`
+	UID   uint64    `json:"uid" db:"user_id"`
+	Ctime time.Time `json:"-" db:"created_at"`
+}

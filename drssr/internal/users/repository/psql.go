@@ -14,6 +14,7 @@ type IPostgresqlRepository interface {
 	GetUserByEmailOrNickname(ctx context.Context, email string, nickname string) (models.User, error)
 	GetUserByLogin(ctx context.Context, login string) (models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
+	GetUserByID(ctx context.Context, id uint64) (models.User, error)
 	GetUserByNickname(ctx context.Context, nickname string) (models.User, error)
 	AddUser(ctx context.Context, user models.SignupCredentials) (models.User, error)
 	UpdateUser(ctx context.Context, user models.UpdateUserReq) (models.User, error)
@@ -22,7 +23,12 @@ type IPostgresqlRepository interface {
 
 	CheckStatus(ctx context.Context) (int, error)
 
-	BecomeStylist(ctx context.Context, uid uint64) (models.User, error)
+	AddStylistRequest(ctx context.Context, uid uint64) (models.StylistRequest, error)
+	DeleteStylistRequestByID(ctx context.Context, id uint64) (models.StylistRequest, error)
+	GetUserStylistRequestByUID(ctx context.Context, uid uint64) (models.StylistRequest, error)
+	GetUserStylistRequestByID(ctx context.Context, uid uint64) (models.StylistRequest, error)
+	AcceptStylist(ctx context.Context, uid uint64) (models.User, error)
+	RejectStylist(ctx context.Context, uid uint64) (models.User, error)
 }
 
 type postgresqlRepository struct {
@@ -96,6 +102,44 @@ func (pr *postgresqlRepository) GetUserByEmailOrNickname(
 			email = $1 OR nickname = $2;`,
 		email,
 		nickname,
+	).Scan(
+		&user.ID,
+		&user.Nickname,
+		&user.Email,
+		&user.Password,
+		&user.Name,
+		&user.Avatar,
+		&user.Stylist,
+		&user.Age,
+		&user.Desc,
+		&user.Ctime,
+	)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
+
+func (pr *postgresqlRepository) GetUserByID(ctx context.Context, id uint64) (models.User, error) {
+	var user models.User
+	err := pr.conn.QueryRow(
+		`SELECT
+			id,
+			nickname,
+			email,
+			password,
+			name,
+			avatar,
+			stylist,
+			date_part('year', age(birth_date)) as age,
+			description,
+			created_at
+		FROM
+			users
+		WHERE
+			id = $1;`,
+		id,
 	).Scan(
 		&user.ID,
 		&user.Nickname,
@@ -335,11 +379,48 @@ func (pr *postgresqlRepository) DeleteUser(ctx context.Context, uid uint64) erro
 	return nil
 }
 
-func (pr *postgresqlRepository) BecomeStylist(ctx context.Context, uid uint64) (models.User, error) {
+func (pr *postgresqlRepository) AcceptStylist(ctx context.Context, uid uint64) (models.User, error) {
 	var updatedUser models.User
 	err := pr.conn.QueryRow(
 		`UPDATE users
 		SET stylist = true
+		WHERE id = $1
+		RETURNING
+			id,
+			nickname,
+			email,
+			password,
+			name,
+			avatar,
+			stylist,
+			date_part('year', age(birth_date)) as age,
+			description,
+			created_at;`,
+		uid,
+	).Scan(
+		&updatedUser.ID,
+		&updatedUser.Nickname,
+		&updatedUser.Email,
+		&updatedUser.Password,
+		&updatedUser.Name,
+		&updatedUser.Avatar,
+		&updatedUser.Stylist,
+		&updatedUser.Age,
+		&updatedUser.Desc,
+		&updatedUser.Ctime,
+	)
+
+	if err != nil {
+		return models.User{}, err
+	}
+	return updatedUser, nil
+}
+
+func (pr *postgresqlRepository) RejectStylist(ctx context.Context, uid uint64) (models.User, error) {
+	var updatedUser models.User
+	err := pr.conn.QueryRow(
+		`UPDATE users
+		SET stylist = false
 		WHERE id = $1
 		RETURNING
 			id,
@@ -408,4 +489,100 @@ func (pr *postgresqlRepository) UpdateAvatar(ctx context.Context, uid uint64, ne
 		return models.User{}, err
 	}
 	return updatedUser, nil
+}
+
+// TODO: move into separate repository
+func (pr *postgresqlRepository) AddStylistRequest(ctx context.Context, uid uint64) (models.StylistRequest, error) {
+	var createdReq models.StylistRequest
+	err := pr.conn.QueryRow(
+		`INSERT INTO stylist_requests (user_id)
+		VALUES ($1)
+		RETURNING
+			id,
+			user_id,
+			created_at;`,
+		uid,
+	).Scan(
+		&createdReq.ID,
+		&createdReq.UID,
+		&createdReq.Ctime,
+	)
+
+	if err != nil {
+		return models.StylistRequest{}, err
+	}
+	return createdReq, nil
+}
+
+// TODO: move into separate repository
+func (pr *postgresqlRepository) DeleteStylistRequestByID(ctx context.Context, id uint64) (models.StylistRequest, error) {
+	var deletedReq models.StylistRequest
+	err := pr.conn.QueryRow(
+		`DELETE FROM stylist_requests
+		WHERE id = $1
+		RETURNING
+			id,
+			user_id,
+			created_at;`,
+		id,
+	).Scan(
+		&deletedReq.ID,
+		&deletedReq.UID,
+		&deletedReq.Ctime,
+	)
+
+	if err != nil {
+		return models.StylistRequest{}, err
+	}
+	return deletedReq, nil
+}
+
+// TODO: move into separate repository
+func (pr *postgresqlRepository) GetUserStylistRequestByUID(ctx context.Context, uid uint64) (models.StylistRequest, error) {
+	var stylistReq models.StylistRequest
+	err := pr.conn.QueryRow(
+		`SELECT
+			id,
+			user_id,
+			created_at
+		FROM
+		stylist_requests
+		WHERE
+			user_id = $1;`,
+		uid,
+	).Scan(
+		&stylistReq.ID,
+		&stylistReq.UID,
+		&stylistReq.Ctime,
+	)
+	if err != nil {
+		return models.StylistRequest{}, err
+	}
+
+	return stylistReq, nil
+}
+
+// TODO: move into separate repository
+func (pr *postgresqlRepository) GetUserStylistRequestByID(ctx context.Context, id uint64) (models.StylistRequest, error) {
+	var stylistReq models.StylistRequest
+	err := pr.conn.QueryRow(
+		`SELECT
+			id,
+			user_id,
+			created_at
+		FROM
+		stylist_requests
+		WHERE
+			id = $1;`,
+		id,
+	).Scan(
+		&stylistReq.ID,
+		&stylistReq.UID,
+		&stylistReq.Ctime,
+	)
+	if err != nil {
+		return models.StylistRequest{}, err
+	}
+
+	return stylistReq, nil
 }

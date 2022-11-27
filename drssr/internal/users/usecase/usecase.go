@@ -20,6 +20,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"drssr/internal/users/repository"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type IUserUsecase interface {
@@ -35,21 +37,24 @@ type IUserUsecase interface {
 
 	CheckStatus(ctx context.Context) (int, error)
 
-	BecomeStylist(ctx context.Context, uid uint64) (models.User, int, error)
+	BecomeStylist(ctx context.Context, user models.User) (int, error)
 }
 
 type userUsecase struct {
+	tgBot  *tgbotapi.BotAPI
 	psql   repository.IPostgresqlRepository
 	rds    repository.IRedisRepository
 	logger logrus.Logger
 }
 
 func NewUserUsecase(
+	tgBot *tgbotapi.BotAPI,
 	pr repository.IPostgresqlRepository,
 	rr repository.IRedisRepository,
 	logger logrus.Logger,
 ) IUserUsecase {
 	return &userUsecase{
+		tgBot:  tgBot,
 		psql:   pr,
 		rds:    rr,
 		logger: logger,
@@ -286,17 +291,6 @@ func (uu *userUsecase) DeleteUser(ctx context.Context, user models.User, cookieV
 	return http.StatusOK, nil
 }
 
-func (uu *userUsecase) BecomeStylist(ctx context.Context, uid uint64) (models.User, int, error) {
-	updatedUser, err := uu.psql.BecomeStylist(ctx, uid)
-	if err != nil {
-		return models.User{},
-			http.StatusInternalServerError,
-			fmt.Errorf("UserUsecase.BecomeStylist: failed to update user's stylist flag: %w", err)
-	}
-
-	return updatedUser, http.StatusOK, nil
-}
-
 type UpdateAvatarArgs struct {
 	User       models.User
 	FileHeader *multipart.FileHeader
@@ -415,4 +409,54 @@ func (uu *userUsecase) DeleteAvatar(ctx context.Context, user models.User) (mode
 	}
 
 	return updatedUser, http.StatusOK, nil
+}
+
+// TODO: move into separate usecase
+func (uu *userUsecase) BecomeStylist(ctx context.Context, user models.User) (int, error) {
+	ctx, rb := rollback.NewCtxRollback(ctx)
+
+	_, err := uu.psql.GetUserStylistRequestByUID(ctx, user.ID)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			return http.StatusInternalServerError,
+				fmt.Errorf("UserUsecase.BecomeStylist: failed to get stylist request from db: %w", err)
+		}
+	}
+
+	// user already have stylist request
+	if err == nil {
+		return http.StatusConflict,
+			fmt.Errorf("UserUsecase.BecomeStylist: user already have stylist request")
+	}
+
+	createdReq, err := uu.psql.AddStylistRequest(ctx, user.ID)
+	if err != nil {
+		return http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.BecomeStylist: failed to save stylist request in db: %w", err)
+	}
+
+	rb.Add(func() {
+		_, err := uu.psql.DeleteStylistRequestByID(ctx, createdReq.ID)
+		if err != nil {
+			uu.logger.Errorf("UserUsecase.DeleteAvatar: failed to rollback saving of stylist request in db: %w", err)
+		}
+	})
+
+	msgText := fmt.Sprintf(consts.StylistRequestMsg, createdReq.ID, user.Email, user.Nickname, user.Name, user.Age, user.Desc)
+	msg := tgbotapi.NewMessage(config.TgBotAPIToken.AdminChatID, msgText)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("Принять", fmt.Sprintf("%d,%d", consts.TGBotResponseAccept, createdReq.ID)),
+			tgbotapi.NewInlineKeyboardButtonData("Отклонить", fmt.Sprintf("%d,%d", consts.TGBotResponseReject, createdReq.ID)),
+		),
+	)
+
+	if _, err := uu.tgBot.Send(msg); err != nil {
+		rb.Run()
+
+		return http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.BecomeStylist: failed to send msg in tg chat: %w", err)
+	}
+
+	return http.StatusOK, nil
 }

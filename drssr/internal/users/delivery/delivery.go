@@ -415,7 +415,7 @@ func (ud *UserDelivery) becomeStylist(w http.ResponseWriter, r *http.Request) {
 		"user": user.Email,
 	}).Logger
 
-	updatedUser, status, err := ud.userUseCase.BecomeStylist(ctx, user.ID)
+	status, err := ud.userUseCase.BecomeStylist(ctx, *user)
 	if err != nil || status != http.StatusOK {
 		logger.WithField(
 			"status",
@@ -425,5 +425,5 @@ func (ud *UserDelivery) becomeStylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ioutils.Send(w, http.StatusOK, updatedUser)
+	ioutils.SendWithoutBody(w, http.StatusOK)
 }

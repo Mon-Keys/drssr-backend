@@ -376,7 +376,7 @@ func (uu *userUsecase) UpdateAvatar(
 	})
 
 	// if user already have avatar deleting
-	if oldAvatar != "" {
+	if oldAvatar != "" && oldAvatar != fmt.Sprintf("%s/%s", consts.DefaultsBaseFolderPath, consts.DefaultAvatarFileName) {
 		err := os.Remove(oldAvatar)
 		if err != nil {
 			rb.Run()

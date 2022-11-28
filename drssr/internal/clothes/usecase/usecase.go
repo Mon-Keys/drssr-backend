@@ -28,6 +28,7 @@ type IClothesUsecase interface {
 	DeleteClothes(ctx context.Context, uid uint64, cid uint64) (int, error)
 	GetAllClothes(ctx context.Context, limit, offset int) (models.ArrayClothes, int, error)
 	GetUsersClothes(ctx context.Context, limit, offset int, uid uint64) (models.ArrayClothes, int, error)
+	GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, int, error)
 }
 
 type clothesUsecase struct {
@@ -296,6 +297,22 @@ func (cu *clothesUsecase) GetUsersClothes(ctx context.Context, limit, offset int
 		return nil,
 			http.StatusInternalServerError,
 			fmt.Errorf("ClothesUsecase.GetUsersClothes: failed to get clothes from db: %w", err)
+	}
+
+	return clothes, http.StatusOK, nil
+}
+
+func (cu *clothesUsecase) GetClothesByID(ctx context.Context, cid uint64) (models.Clothes, int, error) {
+	clothes, err := cu.psql.GetClothesByID(ctx, cid)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return models.Clothes{},
+				http.StatusNotFound,
+				fmt.Errorf("ClothesUsecase.GetClothesByID: failed to found clothes for update: %w", err)
+		}
+		return models.Clothes{},
+			http.StatusInternalServerError,
+			fmt.Errorf("ClothesUsecase.GetClothesByID: failed to get clothes form db: %w", err)
 	}
 
 	return clothes, http.StatusOK, nil

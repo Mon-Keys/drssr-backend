@@ -11,6 +11,7 @@ import (
 	"drssr/internal/users/usecase"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -160,20 +161,43 @@ func (ud *UserDelivery) getSomeUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 	nickname := r.URL.Query().Get("nickname")
-	if nickname == "" {
-		logger.WithField("status", http.StatusBadRequest).Errorf("Bad request from client")
+	idStr := r.URL.Query().Get("id")
+
+	if nickname == "" && idStr == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid query parameters nickname or id")
 		ioutils.SendDefaultError(w, http.StatusBadRequest)
 		return
 	}
 
-	user, status, err := ud.userUseCase.GetUserByNickname(ctx, nickname)
-	if err != nil || status != http.StatusOK {
-		logger.WithField("status", status).Errorf("Failed to get user by nickname: %w", err)
-		ioutils.SendDefaultError(w, status)
-		return
+	var user models.User
+	var status int
+	var err error
+	if nickname != "" {
+		user, status, err = ud.userUseCase.GetUserByNickname(ctx, nickname)
+		if err != nil || status != http.StatusOK {
+			logger.WithField("status", status).Errorf("Failed to get user by nickname: %w", err)
+			ioutils.SendDefaultError(w, status)
+			return
+		}
+		ioutils.Send(w, status, user)
 	}
 
-	ioutils.Send(w, status, user)
+	if idStr != "" {
+		userID, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil {
+			logger.WithField("status", http.StatusInternalServerError).Errorf("Failed to parse user id: %w", err)
+			ioutils.SendDefaultError(w, http.StatusInternalServerError)
+			return
+		}
+
+		user, status, err = ud.userUseCase.GetUserByID(ctx, userID)
+		if err != nil || status != http.StatusOK {
+			logger.WithField("status", status).Errorf("Failed to get user by id: %w", err)
+			ioutils.SendDefaultError(w, status)
+			return
+		}
+		ioutils.Send(w, status, user)
+	}
 }
 
 // private

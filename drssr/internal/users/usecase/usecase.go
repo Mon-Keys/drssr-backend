@@ -27,6 +27,7 @@ import (
 type IUserUsecase interface {
 	GetUserByCookie(ctx context.Context, cookie string) (models.User, int, error)
 	GetUserByNickname(ctx context.Context, nickname string) (models.User, int, error)
+	GetUserByID(ctx context.Context, uid uint64) (models.User, int, error)
 	SignupUser(ctx context.Context, credentials models.SignupCredentials) (models.User, string, int, error)
 	LoginUser(ctx context.Context, credentials models.LoginCredentials) (models.User, string, int, error)
 	LogoutUser(ctx context.Context, email string) (int, error)
@@ -103,7 +104,22 @@ func (uu *userUsecase) GetUserByNickname(ctx context.Context, nickname string) (
 	} else if err != nil {
 		return models.User{},
 			http.StatusInternalServerError,
-			fmt.Errorf("UserUsecase.GetUserByNickname: failed to check nickname in db with err: %s", err)
+			fmt.Errorf("UserUsecase.GetUserByNickname: failed to find user by nickname in db with err: %s", err)
+	}
+
+	return user, http.StatusOK, nil
+}
+
+func (uu *userUsecase) GetUserByID(ctx context.Context, uid uint64) (models.User, int, error) {
+	user, err := uu.psql.GetUserByID(ctx, uid)
+	if err == pgx.ErrNoRows {
+		return models.User{},
+			http.StatusNotFound,
+			fmt.Errorf("UserUsecase.GetUserByID: user with same id not found")
+	} else if err != nil {
+		return models.User{},
+			http.StatusInternalServerError,
+			fmt.Errorf("UserUsecase.GetUserByID: failed to found user by id in db with err: %s", err)
 	}
 
 	return user, http.StatusOK, nil

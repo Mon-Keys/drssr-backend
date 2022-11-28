@@ -44,6 +44,7 @@ func SetClothesRouting(
 	clothesPublicAPI := router.PathPrefix("/api/v1/public/clothes").Subrouter()
 	clothesPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON)
 
+	clothesPublicAPI.HandleFunc("", clothesDelivery.getClothesByID).Methods(http.MethodGet)
 	clothesPublicAPI.HandleFunc("/all", clothesDelivery.getAllClothes).Methods(http.MethodGet)
 }
 
@@ -198,6 +199,42 @@ func (cd *ClothesDelivery) deleteClothes(w http.ResponseWriter, r *http.Request)
 	}
 
 	ioutils.SendWithoutBody(w, status)
+}
+
+func (cd *ClothesDelivery) getClothesByID(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := cd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+
+	queryParams := r.URL.Query()
+
+	idStr := queryParams.Get("id")
+	if idStr == "" {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Invalid query parameter id")
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	clothesID, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil || clothesID <= 0 {
+		logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
+		ioutils.SendDefaultError(w, http.StatusBadRequest)
+		return
+	}
+
+	clothes, status, err := cd.clothesUseCase.GetClothesByID(ctx, clothesID)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get clothes: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, clothes)
 }
 
 func (cd *ClothesDelivery) getAllClothes(w http.ResponseWriter, r *http.Request) {

@@ -176,7 +176,7 @@ func (uu *userUsecase) SignupUser(
 			fmt.Errorf("UserUsecase.SignupUser: failed to hash password: %w", err)
 	}
 	credentials.Password = hashedPswd
-	credentials.Avatar = fmt.Sprintf("%s/%s", consts.AvatarsBaseFolderPath, consts.DefaultAvatarFileName)
+	credentials.Avatar = fmt.Sprintf("%s/%s", consts.DefaultsBaseFolderPath, consts.DefaultAvatarFileName)
 
 	// TODO: чтото с генерацией никнейма
 	// generate nickname if it's empty

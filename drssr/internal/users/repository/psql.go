@@ -322,7 +322,7 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 	var updatedUser models.User
 	err := pr.conn.QueryRow(
 		`UPDATE users
-		SET (nickname, name, birth_date, description) = ($2, $3, $4, $5, $6)
+		SET (name, birth_date, description) = ($2, $3, $4)
 		WHERE email = $1
 		RETURNING
 			id,
@@ -336,7 +336,6 @@ func (pr *postgresqlRepository) UpdateUser(ctx context.Context, newUserData mode
 			description,
 			created_at;`,
 		newUserData.Email,
-		newUserData.Nickname,
 		newUserData.Name,
 		newUserData.BirthDate,
 		newUserData.Desc,

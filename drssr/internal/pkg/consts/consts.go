@@ -2,7 +2,7 @@ package consts
 
 // files
 const (
-	MaxUploadFileSize     = 5 << 20 // 5MB
+	MaxUploadFileSize     = 20 << 20 // 5MB
 	AvatarsBaseFolderPath = "./media/avatars"
 	ClothesBaseFolderPath = "./media/clothes"
 	MasksBaseFolderPath   = "./media/masks"

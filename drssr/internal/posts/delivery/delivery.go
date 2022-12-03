@@ -43,9 +43,11 @@ func SetPostsRouting(
 	looksPrivateAPI.HandleFunc("/likes", postsDelivery.getLikedPosts).Methods(http.MethodGet)
 
 	looksPublicAPI := router.PathPrefix("/api/v1/public/posts").Subrouter()
-	looksPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON)
+	// TODO: delete auth mw from public handlers
+	looksPublicAPI.Use(middleware.WithRequestID, middleware.WithJSON, authMw.WithAuth)
 
 	looksPublicAPI.HandleFunc("", postsDelivery.getPost).Methods(http.MethodGet)
+	looksPublicAPI.HandleFunc("/user", postsDelivery.getOtherUserPosts).Methods(http.MethodGet)
 	looksPublicAPI.HandleFunc("/all", postsDelivery.getAllPosts).Methods(http.MethodGet)
 	looksPublicAPI.HandleFunc("/discover", postsDelivery.getAllMostLikedPosts).Methods(http.MethodGet)
 }
@@ -342,6 +344,13 @@ func (pd *PostsDelivery) getPost(w http.ResponseWriter, r *http.Request) {
 		"url":    r.URL,
 		"req_id": reqID,
 	})
+	// TODO: remove user auth
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
 
 	pidParam := r.URL.Query().Get("id")
 	if pidParam == "" {
@@ -362,7 +371,7 @@ func (pd *PostsDelivery) getPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, status, err := pd.postsUseCase.GetPostByID(ctx, pid)
+	post, status, err := pd.postsUseCase.GetPostByID(ctx, user.ID, pid)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to get post by ID: %w", err)
 		ioutils.SendDefaultError(w, status)
@@ -379,6 +388,13 @@ func (pd *PostsDelivery) getAllPosts(w http.ResponseWriter, r *http.Request) {
 		"url":    r.URL,
 		"req_id": reqID,
 	})
+	// TODO: remove user auth
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
 
 	queryParams := r.URL.Query()
 
@@ -406,7 +422,7 @@ func (pd *PostsDelivery) getAllPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	posts, status, err := pd.postsUseCase.GetAllPosts(ctx, limitInt, offsetInt)
+	posts, status, err := pd.postsUseCase.GetAllPosts(ctx, user.ID, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to get posts: %w", err)
 		ioutils.SendDefaultError(w, status)
@@ -423,6 +439,13 @@ func (pd *PostsDelivery) getAllMostLikedPosts(w http.ResponseWriter, r *http.Req
 		"url":    r.URL,
 		"req_id": reqID,
 	})
+	// TODO: remove user auth
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
 
 	queryParams := r.URL.Query()
 
@@ -450,9 +473,74 @@ func (pd *PostsDelivery) getAllMostLikedPosts(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	posts, status, err := pd.postsUseCase.GetAllMostLikedPosts(ctx, limitInt, offsetInt)
+	posts, status, err := pd.postsUseCase.GetAllMostLikedPosts(ctx, user.ID, limitInt, offsetInt)
 	if err != nil || status != http.StatusOK {
 		logger.WithField("status", status).Errorf("Failed to get most liked posts: %w", err)
+		ioutils.SendDefaultError(w, status)
+		return
+	}
+
+	ioutils.Send(w, status, posts)
+}
+
+func (pd *PostsDelivery) getOtherUserPosts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqID := ctx_utils.GetReqID(ctx)
+	logger := pd.logger.WithFields(logrus.Fields{
+		"url":    r.URL,
+		"req_id": reqID,
+	})
+	user := ctx_utils.GetUser(ctx)
+	if user == nil {
+		logger.WithField("status", http.StatusForbidden).Errorf("Failed to get user from ctx")
+		ioutils.SendDefaultError(w, http.StatusForbidden)
+		return
+	}
+
+	pd.logger = *pd.logger.WithFields(logrus.Fields{
+		"user": user.Email,
+	}).Logger
+
+	queryParams := r.URL.Query()
+
+	var err error
+
+	uidStr := queryParams.Get("uid")
+	var uid uint64
+	if uidStr != "" {
+		uid, err = strconv.ParseUint(uidStr, 10, 64)
+		if err != nil || uid == 0 {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse uid: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	limitStr := queryParams.Get("limit")
+	limitInt := 0
+	if limitStr != "" {
+		limitInt, err = strconv.Atoi(limitStr)
+		if err != nil || limitInt < 0 || limitInt > consts.GetClothesLimit {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse limit: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	offsetStr := queryParams.Get("offset")
+	offsetInt := 0
+	if offsetStr != "" {
+		offsetInt, err = strconv.Atoi(offsetStr)
+		if err != nil || offsetInt < 0 {
+			logger.WithField("status", http.StatusBadRequest).Errorf("Failed to parse offset: %w", err)
+			ioutils.SendDefaultError(w, http.StatusBadRequest)
+			return
+		}
+	}
+
+	posts, status, err := pd.postsUseCase.GetUserPosts(ctx, uid, limitInt, offsetInt)
+	if err != nil || status != http.StatusOK {
+		logger.WithField("status", status).Errorf("Failed to get user's posts: %w", err)
 		ioutils.SendDefaultError(w, status)
 		return
 	}

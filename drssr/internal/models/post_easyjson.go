@@ -100,6 +100,8 @@ func easyjson5a72dc82DecodeDrssrInternalModels(in *jlexer.Lexer, out *Post) {
 			}
 		case "likes":
 			out.Likes = int(in.Int())
+		case "is_liked":
+			out.IsLikes = bool(in.Bool())
 		default:
 			in.SkipRecursive()
 		}
@@ -190,6 +192,11 @@ func easyjson5a72dc82EncodeDrssrInternalModels(out *jwriter.Writer, in Post) {
 		const prefix string = ",\"likes\":"
 		out.RawString(prefix)
 		out.Int(int(in.Likes))
+	}
+	{
+		const prefix string = ",\"is_liked\":"
+		out.RawString(prefix)
+		out.Bool(bool(in.IsLikes))
 	}
 	out.RawByte('}')
 }

@@ -24,11 +24,11 @@ type IPostUsecase interface {
 	AddPost(ctx context.Context, userEmail string, look models.Post) (models.Post, int, error)
 	DeletePost(ctx context.Context, uid uint64, pid uint64) (int, error)
 
-	GetPostByID(ctx context.Context, pid uint64) (models.Post, int, error)
+	GetPostByID(ctx context.Context, uid, pid uint64) (models.Post, int, error)
 	GetUserPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
 	GetLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
-	GetAllPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error)
-	GetAllMostLikedPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error)
+	GetAllPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
+	GetAllMostLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error)
 
 	LikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
 	UnlikePost(ctx context.Context, uid, pid uint64) (models.LikesStruct, int, error)
@@ -321,7 +321,7 @@ func (pu *postsUsecase) GetUserPosts(ctx context.Context, uid uint64, limit int,
 	return posts, http.StatusOK, nil
 }
 
-func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Post, int, error) {
+func (pu *postsUsecase) GetPostByID(ctx context.Context, uid, pid uint64) (models.Post, int, error) {
 	// checking post in db
 	foundingPost, err := pu.psql.GetPostByID(ctx, pid)
 	if err != nil {
@@ -346,11 +346,16 @@ func (pu *postsUsecase) GetPostByID(ctx context.Context, pid uint64) (models.Pos
 		return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to get post's likes: %w", err)
 	}
 
+	foundingPost.IsLikes, err = pu.psql.CheckLike(ctx, uid, pid)
+	if err != nil {
+		return models.Post{}, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetPostByID: failed to check that post is liked: %w", err)
+	}
+
 	return foundingPost, http.StatusOK, nil
 }
 
-func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error) {
-	posts, err := pu.psql.GetAllPosts(ctx, limit, offset)
+func (pu *postsUsecase) GetAllPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error) {
+	posts, err := pu.psql.GetAllPosts(ctx, uid, limit, offset)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, http.StatusNotFound, fmt.Errorf("PostsUsecase.GetAllPosts: not found any posts")
@@ -369,12 +374,17 @@ func (pu *postsUsecase) GetAllPosts(ctx context.Context, limit int, offset int) 
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to get post's likes: %w", err)
 		}
+
+		posts[i].IsLikes, err = pu.psql.CheckLike(ctx, uid, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllPosts: failed to check that post is liked: %w", err)
+		}
 	}
 
 	return posts, http.StatusOK, nil
 }
 
-func (pu *postsUsecase) GetAllMostLikedPosts(ctx context.Context, limit int, offset int) (models.ArrayPosts, int, error) {
+func (pu *postsUsecase) GetAllMostLikedPosts(ctx context.Context, uid uint64, limit int, offset int) (models.ArrayPosts, int, error) {
 	posts, err := pu.psql.GetAllMostLikedPosts(ctx, limit, offset)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -388,6 +398,11 @@ func (pu *postsUsecase) GetAllMostLikedPosts(ctx context.Context, limit int, off
 		posts[i], status, err = pu.generateElement(ctx, posts[i])
 		if err != nil || status != http.StatusOK {
 			return nil, status, fmt.Errorf("PostsUsecase.GetAllMostLikedPosts: failed to generate post's element: %w", err)
+		}
+
+		posts[i].IsLikes, err = pu.psql.CheckLike(ctx, uid, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetAllMostLikedPosts: failed to check that post is liked: %w", err)
 		}
 	}
 
@@ -413,6 +428,11 @@ func (pu *postsUsecase) GetLikedPosts(ctx context.Context, uid uint64, limit int
 		posts[i].Likes, err = pu.psql.GetPostLikes(ctx, posts[i].ID)
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetLikedPosts: failed to get post's likes: %w", err)
+		}
+
+		posts[i].IsLikes, err = pu.psql.CheckLike(ctx, uid, posts[i].ID)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("PostsUsecase.GetLikedPosts: failed to check that post is liked: %w", err)
 		}
 	}
 

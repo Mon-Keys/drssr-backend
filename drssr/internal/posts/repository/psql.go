@@ -17,12 +17,13 @@ type IPostgresqlRepository interface {
 	GetPostByID(ctx context.Context, pid uint64) (models.Post, error)
 	GetUserPosts(ctx context.Context, limit, offset int, uid uint64) ([]models.Post, error)
 	GetLikedPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error)
-	GetAllPosts(ctx context.Context, limit, offset int) ([]models.Post, error)
+	GetAllPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error)
 	GetAllMostLikedPosts(ctx context.Context, limit, offset int) ([]models.Post, error)
 
 	GetPostLikes(ctx context.Context, pid uint64) (int, error)
 	LikePost(ctx context.Context, uid, pid uint64) error
 	UnlikePost(ctx context.Context, uid, pid uint64) error
+	CheckLike(ctx context.Context, uid, pid uint64) (bool, error)
 }
 
 type postgresqlRepository struct {
@@ -162,7 +163,9 @@ func (pr *postgresqlRepository) GetUserPosts(ctx context.Context, limit, offset 
 		creator_id,
 		previews_paths,
 		created_at
-	FROM posts WHERE creator_id = $1`
+	FROM posts
+	WHERE creator_id = $1
+	ORDER BY created_at DESC`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -202,7 +205,7 @@ func (pr *postgresqlRepository) GetUserPosts(ctx context.Context, limit, offset 
 	return respList, nil
 }
 
-func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset int) ([]models.Post, error) {
+func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, uid uint64, limit, offset int) ([]models.Post, error) {
 	query := `SELECT
 		id,
 		type,
@@ -212,7 +215,9 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 		creator_id,
 		previews_paths,
 		created_at
-	FROM posts`
+	FROM posts
+	WHERE creator_id <> $1
+	ORDER BY created_at DESC`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -221,7 +226,7 @@ func (pr *postgresqlRepository) GetAllPosts(ctx context.Context, limit, offset i
 	if offset > 0 {
 		o = fmt.Sprintf(" OFFSET %d", offset)
 	}
-	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o))
+	rows, err := pr.conn.Query(fmt.Sprintf("%s%s%s;", query, l, o), uid)
 	if err != nil {
 		return []models.Post{}, err
 	}
@@ -317,7 +322,8 @@ func (pr *postgresqlRepository) GetLikedPosts(ctx context.Context, uid uint64, l
 		p.created_at
 	FROM posts p
 	JOIN likes l ON l.post_id = p.id
-	WHERE l.user_id = $1`
+	WHERE l.user_id = $1
+	ORDER BY l.created_at DESC`
 	var l string
 	if limit > 0 {
 		l = fmt.Sprintf(" LIMIT %d", limit)
@@ -412,4 +418,21 @@ func (pr *postgresqlRepository) UnlikePost(ctx context.Context, uid, pid uint64)
 		}
 	}
 	return nil
+}
+
+func (pr *postgresqlRepository) CheckLike(ctx context.Context, uid, pid uint64) (bool, error) {
+	var exist bool
+	err := pr.conn.QueryRow(
+		`SELECT EXISTS (SELECT id FROM likes WHERE post_id = $1 AND user_id = $2);`,
+		pid,
+		uid,
+	).Scan(
+		&exist,
+	)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exist, nil
 }

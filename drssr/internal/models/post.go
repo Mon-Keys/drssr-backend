@@ -22,6 +22,7 @@ type Post struct {
 	Previews      []string  `json:"previews" db:"-"`
 	PreviewsPaths []string  `json:"previews_paths" db:"previews_paths"`
 	Likes         int       `json:"likes" db:"likes"`
+	IsLikes       bool      `json:"is_liked" db:"-"`
 	Ctime         time.Time `json:"-" db:"created_at"`
 }
 

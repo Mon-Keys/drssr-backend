@@ -8,7 +8,7 @@ redis:
   db_name: 0
 
 postgres:
-  host: "127.0.0.1"
+  host: "95.84.192.140"
   # host: "host.docker.internal"
   port: "5432"
   user: "admin"

@@ -70,7 +70,7 @@ func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.C
 			mask,
 			owner_id,
 			created_at;`,
-		models.ToEnglishType[clothes.Type],
+		clothes.Type,
 		clothes.ImgPath,
 		clothes.MaskPath,
 		clothes.OwnerID,
@@ -84,8 +84,6 @@ func (pr *postgresqlRepository) AddClothes(ctx context.Context, clothes models.C
 		&createdClothes.OwnerID,
 		&createdClothes.Ctime,
 	)
-
-	createdClothes.Type = models.ToRussianType[createdClothes.Type]
 
 	if err != nil {
 		return models.Clothes{}, err
@@ -115,7 +113,7 @@ func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesDat
 			owner_id,
 			created_at;`,
 		newClothesData.ID,
-		models.ToEnglishType[newClothesData.Type],
+		newClothesData.Type,
 		newClothesData.Name,
 		newClothesData.Desc,
 		newClothesData.Color,
@@ -140,8 +138,6 @@ func (pr *postgresqlRepository) UpdateClothes(ctx context.Context, newClothesDat
 		&updatedClothes.OwnerID,
 		&updatedClothes.Ctime,
 	)
-
-	updatedClothes.Type = models.ToRussianType[updatedClothes.Type]
 
 	if err != nil {
 		return models.Clothes{}, err
@@ -174,11 +170,7 @@ func (pr *postgresqlRepository) GetClothesMaskByTypeAndSex(
 	clothesType string,
 	clothesSex string,
 ) ([]models.Clothes, error) {
-	rows, err := pr.conn.Query(
-		`SELECT id, mask FROM clothes WHERE type = $1 AND sex = $2;`,
-		models.ToEnglishType[clothesType],
-		clothesSex,
-	)
+	rows, err := pr.conn.Query(`SELECT id, mask FROM clothes WHERE type = $1 AND sex = $2;`, clothesType, clothesSex)
 	if err != nil {
 		return []models.Clothes{}, err
 	}
@@ -319,7 +311,6 @@ func (pr *postgresqlRepository) GetAllClothes(ctx context.Context, limit, offset
 		if err != nil {
 			return []models.Clothes{}, err
 		}
-		row.Type = models.ToRussianType[row.Type]
 		respList = append(respList, row)
 	}
 	if err := rows.Err(); err != nil {
@@ -382,7 +373,6 @@ func (pr *postgresqlRepository) GetUsersClothes(ctx context.Context, limit, offs
 		if err != nil {
 			return []models.Clothes{}, err
 		}
-		row.Type = models.ToRussianType[row.Type]
 		respList = append(respList, row)
 	}
 	if err := rows.Err(); err != nil {
@@ -432,8 +422,6 @@ func (pr *postgresqlRepository) GetClothesByID(ctx context.Context, cid uint64) 
 	if err != nil {
 		return models.Clothes{}, err
 	}
-
-	clothes.Type = models.ToRussianType[clothes.Type]
 
 	return clothes, nil
 }

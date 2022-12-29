@@ -142,9 +142,11 @@ func (cu *clothesUsecase) AddFile(
 			fmt.Errorf("ClothesUsecase.AddFile: failed to determine type of clothes: %w", err)
 	}
 
+	translatedType := consts.ClothesTypeToRussian(clothesType)
+
 	createdClothes, err := cu.psql.AddClothes(ctx, models.Clothes{
 		OwnerID:  args.UID,
-		Type:     clothesType,
+		Type:     translatedType,
 		ImgPath:  clothesFilePath,
 		MaskPath: masksFilePath,
 	})

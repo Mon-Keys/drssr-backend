@@ -19,6 +19,67 @@ const (
 	GetClothesLimit = 1000
 )
 
+func ClothesTypeToRussian(engType string) string {
+	var russianTypes = map[string]string{
+		"Anorak":      "Анорак",
+		"Blazer":      "Блейзер",
+		"Blouse":      "Блузка",
+		"Bomber":      "Бомбер",
+		"Button-Down": "Рубашка",
+		"Caftan":      "Кафтан",
+		"Capris":      "Капри",
+		"Cardigan":    "Кардиган",
+		"Chinos":      "Чиносы",
+		"Coat":        "Пальто",
+		"Coverup":     "Туника",
+		"Culottes":    "Брюки-кюлоты",
+		"Cutoffs":     "Обрезанные шорты",
+		"Dress":       "Платье",
+		"Flannel":     "Фланель",
+		// ???
+		"Gauchos":  "Гаучо",
+		"Halter":   "Топ с лямкой на шее",
+		"Henley":   "Пуловер с воротником",
+		"Hoodie":   "Худи",
+		"Jacket":   "Пиджак",
+		"Jeans":    "Джинсы",
+		"Jeggings": "Джеггинсы",
+		"Jersey":   "Джерси",
+		// вообще это шорты для езды на лошади
+		"Jodhpurs":    "Бриджи",
+		"Joggers":     "Джоггеры",
+		"Jumpsuit":    "Комбинезон",
+		"Kaftan":      "Кафтан",
+		"Kimono":      "Кимоно",
+		"Leggings":    "Леггинсы",
+		"Onesie":      "Кигуруми",
+		"Parka":       "Парка",
+		"Peacoat":     "Бушлат",
+		"Poncho":      "Пончо",
+		"Robe":        "Халат",
+		"Romper":      "Ромпер",
+		"Sarong":      "Саронг",
+		"Shorts":      "Шорты",
+		"Skirt":       "Юбка",
+		"Sweater":     "Свитер",
+		"Sweatpants":  "Тренировочные брюки",
+		"Sweatshorts": "Спортивные шорты",
+		"Tank":        "Майка",
+		"Tee":         "Футболка",
+		"Top":         "Топ",
+		"Trunks":      "Плавки",
+		"Turtleneck":  "Водолазка",
+	}
+
+	rusType, ok := russianTypes[engType]
+	if !ok {
+		// for custom types
+		return engType
+	}
+
+	return rusType
+}
+
 // looks
 const (
 	GetLooksLimit = 1000

@@ -6,14 +6,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: curl 'https://kiru.space/ci/github/pull_rep' -k
-  deploy_api:
-    runs-on: ubuntu-latest
-    needs: pull_rep
-    steps:
-      - run: curl 'https://kiru.space/ci/github/deploy_api' -k
 
   deploy_nginx:
     runs-on: ubuntu-latest
     needs: pull_rep
     steps:
       - run: curl 'https://kiru.space/ci/github/deploy_nginx' -k
+
+  deploy_api:
+    runs-on: ubuntu-latest
+    needs: [pull_rep, deploy_nginx]
+    steps:
+      - run: curl 'https://kiru.space/ci/github/deploy_api' -k
+

@@ -40,7 +40,7 @@ func resolveErrorToString(respCode int) string {
 	case http.StatusBadRequest:
 		return "bad request"
 	case http.StatusUnauthorized:
-		return "no auth1234"
+		return "no auth"
 	case http.StatusForbidden:
 		return "forbidden"
 	case http.StatusNotFound:

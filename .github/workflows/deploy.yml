@@ -1,8 +1,19 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Deploy Kiru Backend
+run-name: ${{ github.actor }} deploy 🚀
 on: [push]
 jobs:
-  Explore-GitHub-Actions:
+  pull_rep:
     runs-on: ubuntu-latest
     steps:
       - run: curl 'https://kiru.space/ci/github/deploy_api' -k
+  deploy_api:
+    runs-on: ubuntu-latest
+    needs: pull_rep
+    steps:
+      - run: curl 'https://kiru.space/ci/github/deploy_api' -k
+
+  deploy_nginx:
+    runs-on: ubuntu-latest
+    needs: pull_rep
+    steps:
+      - run: curl 'https://kiru.space/ci/github/deploy_nginx' -k

@@ -5,7 +5,7 @@ jobs:
   pull_rep:
     runs-on: ubuntu-latest
     steps:
-      - run: curl 'https://kiru.space/ci/github/deploy_api' -k
+      - run: curl 'https://kiru.space/ci/github/pull_rep' -k
   deploy_api:
     runs-on: ubuntu-latest
     needs: pull_rep

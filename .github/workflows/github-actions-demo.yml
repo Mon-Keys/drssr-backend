@@ -5,4 +5,4 @@ jobs:
   Explore-GitHub-Actions:
     runs-on: ubuntu-latest
     steps:
-      - run: curl 'http://kiru.space:8080/github/deploy_api' -k
+      - run: curl 'https://kiru.space/ci/github/deploy_api' -k
